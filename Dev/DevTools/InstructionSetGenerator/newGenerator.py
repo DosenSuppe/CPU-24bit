@@ -28,16 +28,17 @@ def generateRegisterStoreToMemory(pRegister: int):
 instruction_set = [
     {   
         'name': 'nop',
-        'op_code': 0x0000,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction()
     },
     {   
         'name': 'halt',
-        'op_code': 0x0001,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction([0x400])
     },
+    {
+        'name': 'load',
+    }
 ]
 
 # Helper to convert single values to lists if necessary
@@ -83,8 +84,12 @@ def create_instruction_microcode(instruction):
 
 # Main generation loop
 def generate_microcode(instruction_set):
+    currentOpCode = 0
+    
     microcode = {}
     for instruction in instruction_set:
+        instruction['op_code'] = currentOpCode
+        currentOpCode += 1
         steps = create_instruction_microcode(instruction)
         for step in steps:
             # Check for address conflict
