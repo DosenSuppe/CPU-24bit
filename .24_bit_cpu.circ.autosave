@@ -50,62 +50,62 @@
     <a name="circuit" val="Main"/>
     <a name="circuitnamedboxfixedsize" val="true"/>
     <a name="simulationFrequency" val="4096.0"/>
-    <comp lib="5" loc="(160,550)" name="Button">
+    <comp lib="5" loc="(390,700)" name="Button">
       <a name="label" val="Reset_System"/>
     </comp>
-    <comp lib="5" loc="(160,580)" name="Button">
+    <comp lib="5" loc="(390,730)" name="Button">
       <a name="label" val="Reset_RAM"/>
     </comp>
-    <comp loc="(1020,540)" name="Register_24Bit"/>
-    <comp loc="(380,120)" name="CPU_24Bit"/>
-    <comp loc="(790,120)" name="RAM_Chip"/>
-    <wire from="(1020,560)" to="(1040,560)"/>
-    <wire from="(1040,40)" to="(1040,560)"/>
-    <wire from="(160,550)" to="(190,550)"/>
-    <wire from="(160,580)" to="(200,580)"/>
-    <wire from="(170,130)" to="(180,130)"/>
-    <wire from="(170,40)" to="(170,130)"/>
-    <wire from="(170,40)" to="(510,40)"/>
-    <wire from="(190,370)" to="(190,420)"/>
-    <wire from="(190,420)" to="(190,550)"/>
-    <wire from="(190,420)" to="(690,420)"/>
-    <wire from="(200,430)" to="(200,580)"/>
-    <wire from="(200,430)" to="(700,430)"/>
-    <wire from="(340,370)" to="(340,380)"/>
-    <wire from="(340,380)" to="(640,380)"/>
-    <wire from="(380,130)" to="(510,130)"/>
-    <wire from="(380,150)" to="(670,150)"/>
-    <wire from="(380,160)" to="(660,160)"/>
-    <wire from="(380,170)" to="(650,170)"/>
-    <wire from="(380,180)" to="(640,180)"/>
-    <wire from="(380,210)" to="(540,210)"/>
-    <wire from="(510,130)" to="(680,130)"/>
-    <wire from="(510,40)" to="(510,130)"/>
-    <wire from="(510,40)" to="(880,40)"/>
-    <wire from="(540,210)" to="(540,580)"/>
-    <wire from="(540,580)" to="(950,580)"/>
-    <wire from="(640,180)" to="(640,190)"/>
-    <wire from="(640,190)" to="(680,190)"/>
-    <wire from="(640,240)" to="(640,380)"/>
-    <wire from="(640,240)" to="(680,240)"/>
-    <wire from="(640,380)" to="(640,600)"/>
-    <wire from="(640,600)" to="(950,600)"/>
-    <wire from="(650,170)" to="(650,180)"/>
-    <wire from="(650,180)" to="(680,180)"/>
-    <wire from="(660,160)" to="(660,170)"/>
-    <wire from="(660,170)" to="(680,170)"/>
-    <wire from="(670,150)" to="(670,160)"/>
-    <wire from="(670,160)" to="(680,160)"/>
-    <wire from="(690,280)" to="(690,420)"/>
-    <wire from="(690,420)" to="(690,640)"/>
-    <wire from="(690,640)" to="(970,640)"/>
-    <wire from="(700,280)" to="(700,430)"/>
-    <wire from="(790,130)" to="(880,130)"/>
-    <wire from="(880,130)" to="(880,560)"/>
-    <wire from="(880,40)" to="(1040,40)"/>
-    <wire from="(880,40)" to="(880,130)"/>
-    <wire from="(880,560)" to="(950,560)"/>
-    <wire from="(970,630)" to="(970,640)"/>
+    <comp loc="(1020,270)" name="RAM_Chip"/>
+    <comp loc="(1250,690)" name="Register_24Bit"/>
+    <comp loc="(610,270)" name="CPU_24Bit"/>
+    <wire from="(1020,280)" to="(1110,280)"/>
+    <wire from="(1110,190)" to="(1110,280)"/>
+    <wire from="(1110,190)" to="(1270,190)"/>
+    <wire from="(1110,280)" to="(1110,710)"/>
+    <wire from="(1110,710)" to="(1180,710)"/>
+    <wire from="(1200,780)" to="(1200,790)"/>
+    <wire from="(1250,710)" to="(1270,710)"/>
+    <wire from="(1270,190)" to="(1270,710)"/>
+    <wire from="(390,700)" to="(420,700)"/>
+    <wire from="(390,730)" to="(430,730)"/>
+    <wire from="(400,190)" to="(400,280)"/>
+    <wire from="(400,190)" to="(740,190)"/>
+    <wire from="(400,280)" to="(410,280)"/>
+    <wire from="(420,520)" to="(420,570)"/>
+    <wire from="(420,570)" to="(420,700)"/>
+    <wire from="(420,570)" to="(920,570)"/>
+    <wire from="(430,580)" to="(430,730)"/>
+    <wire from="(430,580)" to="(930,580)"/>
+    <wire from="(570,520)" to="(570,530)"/>
+    <wire from="(570,530)" to="(870,530)"/>
+    <wire from="(610,280)" to="(740,280)"/>
+    <wire from="(610,300)" to="(900,300)"/>
+    <wire from="(610,310)" to="(890,310)"/>
+    <wire from="(610,320)" to="(880,320)"/>
+    <wire from="(610,330)" to="(870,330)"/>
+    <wire from="(610,360)" to="(770,360)"/>
+    <wire from="(740,190)" to="(1110,190)"/>
+    <wire from="(740,190)" to="(740,280)"/>
+    <wire from="(740,280)" to="(910,280)"/>
+    <wire from="(770,360)" to="(770,730)"/>
+    <wire from="(770,730)" to="(1180,730)"/>
+    <wire from="(870,330)" to="(870,340)"/>
+    <wire from="(870,340)" to="(910,340)"/>
+    <wire from="(870,390)" to="(870,530)"/>
+    <wire from="(870,390)" to="(910,390)"/>
+    <wire from="(870,530)" to="(870,750)"/>
+    <wire from="(870,750)" to="(1180,750)"/>
+    <wire from="(880,320)" to="(880,330)"/>
+    <wire from="(880,330)" to="(910,330)"/>
+    <wire from="(890,310)" to="(890,320)"/>
+    <wire from="(890,320)" to="(910,320)"/>
+    <wire from="(900,300)" to="(900,310)"/>
+    <wire from="(900,310)" to="(910,310)"/>
+    <wire from="(920,430)" to="(920,570)"/>
+    <wire from="(920,570)" to="(920,790)"/>
+    <wire from="(920,790)" to="(1200,790)"/>
+    <wire from="(930,430)" to="(930,580)"/>
   </circuit>
   <circuit name="CPU_24Bit">
     <a name="appearance" val="custom"/>
@@ -392,30 +392,30 @@
     <comp lib="6" loc="(1660,475)" name="Text">
       <a name="text" val="B"/>
     </comp>
-    <comp lib="6" loc="(1932,1462)" name="Text">
-      <a name="font" val="SansSerif plain 12"/>
-      <a name="text" val="5. CPU takes over again"/>
-    </comp>
-    <comp lib="6" loc="(1937,1362)" name="Text">
-      <a name="font" val="SansSerif plain 12"/>
-      <a name="text" val="When drawing an image/ pixel to display:"/>
-    </comp>
     <comp lib="6" loc="(1995,375)" name="Text">
       <a name="text" val="ACC"/>
     </comp>
-    <comp lib="6" loc="(2022,1382)" name="Text">
+    <comp lib="6" loc="(2821,486)" name="Text">
+      <a name="font" val="SansSerif plain 12"/>
+      <a name="text" val="5. CPU takes over again"/>
+    </comp>
+    <comp lib="6" loc="(2826,386)" name="Text">
+      <a name="font" val="SansSerif plain 12"/>
+      <a name="text" val="When drawing an image/ pixel to display:"/>
+    </comp>
+    <comp lib="6" loc="(2911,406)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
       <a name="text" val="1. CPU moves set-pixel instruction into this Expansion Register"/>
     </comp>
-    <comp lib="6" loc="(2082,1442)" name="Text">
+    <comp lib="6" loc="(2971,466)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
       <a name="text" val="4. The Display sends &quot;finished&quot; instruction into this expansion register once it is done "/>
     </comp>
-    <comp lib="6" loc="(2132,1422)" name="Text">
+    <comp lib="6" loc="(3021,446)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
       <a name="text" val="3. The Display Processor (GPU) now takes over the execution time and proccesses the given instruction"/>
     </comp>
-    <comp lib="6" loc="(2192,1402)" name="Text">
+    <comp lib="6" loc="(3081,426)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
       <a name="text" val="2. CPU yields until it reads a &quot;finished&quot; instruction from this Expansion Register (Or a variable look-up instruction for example)"/>
     </comp>

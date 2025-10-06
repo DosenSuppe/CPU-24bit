@@ -1,38 +1,18 @@
 import sys
 import save_rom
 from pprint import pprint
+from Microcode import *
+from Registers import *
 
-# --- Control Word Bit Definitions ---
-# The register control signals are now separated:
-# Bit 22: read from register (REG_SRC_EN)
-# Bit 23: store to register (REG_DEST_LD)
+FETCH = [
+    RAM_ADDRESS_LOAD | REGISTER_LOAD | GenerateDestinationRegister(Register.PC), 
+    ENABLE_RAM_OUTPUT | RAM_READ | ENABLE_PC | INSTRUCTION_LOAD
+]
 
-# NOTE: Bits 16-21 are for addressing the register file. Since the 4-bit R_src and R_dest IDs
-# come from the IR and directly select the register, these bits are likely not needed
-# in the Control Word for R-R moves, but we define the required R/W enables.
-
-REG_SRC_EN = 1 << 22  # Read from register (R_src outputs data)
-REG_DEST_LD = 1 << 23 # Store to register (R_dest loads data)
- 
-FETCH = [0x7C0004, 0x01000B]
-INSTRUCTION_END = [0x000800] 
+INSTRUCTION_END = [INSTRUCTION_READ]
 
 def generateInstruction(pInstruction: list[int] = []):
     return FETCH + [instruction for instruction in pInstruction] + INSTRUCTION_END
-
-def generateRegisterImmediates():
-    pass
-
-def generateRegisterToRegister():
-    pass
-
-# --- MOV Microcode Sequence ---
-# Step 2: R_src drives the bus (REG_SRC_EN).
-# Step 3: R_dest loads from the bus (REG_DEST_LD).
-MOV_STEPS = [
-    REG_SRC_EN,   # Step 2: R_src (IR[8-11]) outputs to data bus
-    REG_DEST_LD   # Step 3: R_dest (IR[12-15]) loads from data bus
-]
 
 instruction_set = [
     {   
@@ -43,20 +23,23 @@ instruction_set = [
     {
         'name': 'halt',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
-        'steps': generateInstruction([0x400])
+        'steps': generateInstruction([HALT])
     },
     
     # data movement instructions
     {
         'name': 'mov', # moving between registers
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x820000])
+        'steps': generateInstruction([ENABLE_SOURCE_REGISTER | REGISTER_STORE])
     },
     
     {
         'name': 'ldi', # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x7C0004, 0x81000A])
+        'steps': generateInstruction([
+            RAM_ADDRESS_LOAD | REGISTER_LOAD | GenerateDestinationRegister(Register.PC), 
+            ENABLE_RAM_OUTPUT | REGISTER_STORE | ENABLE_PC | RAM_READ
+        ])
     },
     {
         'name': 'ldi_addr', # loading immediate from RAM location into register
@@ -67,7 +50,11 @@ instruction_set = [
     {
         'name': 'str', # storing register value to RAM location
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x7C0004, 0x01000E, 0x020010])
+        'steps': generateInstruction([
+            RAM_ADDRESS_LOAD | REGISTER_LOAD |GenerateDestinationRegister(Register.PC),
+            0x01000E, 
+            0x020010
+        ])
     },
     {
         'name': 'str_addr', # storing immediate value to RAM location
