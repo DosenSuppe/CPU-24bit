@@ -52,6 +52,7 @@ instruction_set = [
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([0x820000])
     },
+    
     {
         'name': 'ldi', # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
