@@ -1,5 +1,6 @@
 import sys
 import save_rom
+from pprint import pprint
 
 # --- Control Word Bit Definitions ---
 # The register control signals are now separated:
@@ -39,20 +40,65 @@ instruction_set = [
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction()
     },
-    {   
+    {
         'name': 'halt',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction([0x400])
     },
+    
+    # data movement instructions
     {
-        'name': 'mov',
+        'name': 'mov', # moving between registers
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x820000]) # old 0x80000A
+        'steps': generateInstruction([0x820000])
     },
     {
-        'name': 'ldi',
+        'name': 'ldi', # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([0x7C0004, 0x81000A])
+    },
+    {
+        'name': 'ldi_addr', # loading immediate from RAM location into register
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction() # TODO
+    },
+    
+    {
+        'name': 'str', # storing register value to RAM location
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x7C0004, 0x01000E, 0x020010])
+    },
+    {
+        'name': 'str_addr', # storing immediate value to RAM location
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction() # TODO
+    },
+    
+    # ALU Operations
+    {
+        'name': 'add',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x880000])
+    },
+    {
+        'name': 'sub',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x881000])
+    },
+    {
+        'name': 'mul',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x882000])
+    },
+    {
+        'name': 'div',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x883000])
+    },
+    {
+        'name': 'div',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([0x884000])
     }
 ]
 
@@ -84,12 +130,15 @@ def create_instruction_microcode(instruction):
                         
     return microcode_steps
 
+instructions = {}
 def generate_microcode(instruction_set):
+    global instructions
     currentOpCode = 0
     
     microcode = {}
     for instruction in instruction_set:
         instruction['op_code'] = currentOpCode
+        instructions[instruction['name']] = f"0x{currentOpCode:06X}"
         currentOpCode += 1
         steps = create_instruction_microcode(instruction)
         for step in steps:
@@ -125,6 +174,7 @@ if __name__ == "__main__":
     final_rom_data = fill_microcode_addresses(microcode_dict)
     
     print(f"Generated {len(final_rom_data)} total microcode words (16 MiB ROM image).")
+    pprint(f"Microcode generation complete. Opcodes:\n{instructions}")
     
     try:
         save_rom.save_file("bytecode/cpu_microcode.rom", final_rom_data, 24)
