@@ -4,9 +4,11 @@ from pprint import pprint
 from Microcode import *
 from Registers import *
 
+from MicroInstructions import MicroInstructions as MI
+
 FETCH = [
-    RAM_ADDRESS_LOAD | REGISTER_LOAD | GenerateDestinationRegister(Register.PC), 
-    ENABLE_RAM_OUTPUT | RAM_READ | ENABLE_PC | INSTRUCTION_LOAD
+    MI.LOAD_PC_AS_RAM_ADDRESS, 
+    MI.READ_RAM | ENABLE_PC | INSTRUCTION_LOAD
 ]
 
 INSTRUCTION_END = [INSTRUCTION_READ]
@@ -37,29 +39,36 @@ instruction_set = [
         'name': 'ldi', # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
-            RAM_ADDRESS_LOAD | REGISTER_LOAD | GenerateDestinationRegister(Register.PC), 
-            ENABLE_RAM_OUTPUT | REGISTER_STORE | ENABLE_PC | RAM_READ
+            MI.LOAD_PC_AS_RAM_ADDRESS, 
+            MI.READ_RAM | REGISTER_STORE | ENABLE_PC
         ])
     },
     {
         'name': 'ldi_addr', # loading immediate from RAM location into register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction() # TODO
+        'steps': generateInstruction([
+            MI.LOAD_PC_AS_RAM_ADDRESS,
+            MI.LOAD_ADDRESS_FROM_RAM,
+            MI.READ_RAM | REGISTER_STORE 
+        ])
     },
     
     {
-        'name': 'str', # storing register value to RAM location
+        'name': 'str', # storing register value to RAM location : STR 0xff0000, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
-            RAM_ADDRESS_LOAD | REGISTER_LOAD |GenerateDestinationRegister(Register.PC),
-            0x01000E, 
-            0x020010
+            MI.LOAD_PC_AS_RAM_ADDRESS,
+            MI.LOAD_ADDRESS_FROM_RAM,
+            ENABLE_SOURCE_REGISTER | RAM_WRITE 
         ])
     },
     {
-        'name': 'str_addr', # storing immediate value to RAM location
+        'name': 'str_addr', # storing value to RAM location from RAM address in register : STR REB, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction() # TODO
+        'steps': generateInstruction([
+            ENABLE_SOURCE_REGISTER | RAM_ADDRESS_LOAD,
+            REGISTER_LOAD | RAM_WRITE
+        ])
     },
     
     # ALU Operations

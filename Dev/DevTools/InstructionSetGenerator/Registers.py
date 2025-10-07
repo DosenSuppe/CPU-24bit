@@ -1,6 +1,5 @@
-from enum import Enum
 
-class Register(Enum):
+class Register:
     REA = 0x0
     REB = 0x1
     ACC = 0x2
@@ -20,7 +19,7 @@ class Register(Enum):
     SP = 0xE
     PC = 0xF
     
-class ExpasionPortRegister(Enum):
+class ExpasionPortRegister:
     EP0 = 0x10
     EP1 = 0x11
     EP2 = 0x12

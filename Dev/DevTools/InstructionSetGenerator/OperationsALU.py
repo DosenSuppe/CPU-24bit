@@ -1,0 +1,12 @@
+class OperationsALU:
+    ADD = 0x0
+    SUB = 0x1
+    MUL = 0x2
+    DIV = 0x3
+    AND = 0x4
+    OR = 0x5
+    XOR = 0x6
+    SHL = 0x7
+    
+    
+    
