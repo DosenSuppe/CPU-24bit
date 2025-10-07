@@ -1,10 +1,13 @@
 import sys
-import save_rom
-from pprint import pprint
-from Microcode import *
-from Registers import *
+import SaveRom as SaveRom
 
-from MicroInstructions import MicroInstructions as MI
+from pprint import pprint
+
+from Values.Microcode import *
+from Values.Registers import *
+
+from Values.MicroInstructions import MicroInstructions as MI
+from Values.OperationsALU import ALU
 
 FETCH = [
     MI.LOAD_PC_AS_RAM_ADDRESS, 
@@ -75,28 +78,43 @@ instruction_set = [
     {
         'name': 'add',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x880000])
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.ADD)])
     },
     {
         'name': 'sub',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x881000])
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SUB)])
     },
     {
         'name': 'mul',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x882000])
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.MUL)])
     },
     {
         'name': 'div',
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x883000])
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.DIV)])
     },
     {
-        'name': 'div',
+        'name': 'shl', # shift bits to left
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([0x884000])
-    }
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SHL)])
+    },
+    {
+        'name': 'and',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.AND)])
+    },
+    {
+        'name': 'or',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.OR)])
+    },
+    {
+        'name': 'xor',
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.XOR)])
+    },
 ]
 
 def cast_array(value):
@@ -174,7 +192,7 @@ if __name__ == "__main__":
     pprint(f"Microcode generation complete. Opcodes:\n{instructions}")
     
     try:
-        save_rom.save_file("bytecode/cpu_microcode.rom", final_rom_data, 24)
+        SaveRom.save_file("bytecode/cpu_microcode.rom", final_rom_data, 24)
         print("ROM data saved successfully.")
     except Exception as e:
         print(f"Failed to save ROM file: {e}")

@@ -1,0 +1,13 @@
+class ALU:
+    ADD = 0x0
+    SUB = 0x1
+    MUL = 0x2
+    DIV = 0x3
+    SHL = 0x4
+    AND = 0x5
+    OR = 0x6
+    XOR = 0x7
+    
+    
+    
+    

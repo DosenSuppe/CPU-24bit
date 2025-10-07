@@ -5,6 +5,6 @@ class MicroInstructions:
     READ_RAM = ENABLE_RAM_OUTPUT | RAM_READ
     LOAD_ADDRESS_FROM_RAM = READ_RAM | RAM_ADDRESS_LOAD | ENABLE_PC
     
-    LOAD_ACC = REGISTER_LOAD | GenerateDestinationRegister(Register.ACC) | SET_AS_DESTINATION_ADDRESS
+    STORE_ACC = REGISTER_STORE | GenerateDestinationRegister(Register.ACC) | SET_AS_DESTINATION_ADDRESS
     
     
