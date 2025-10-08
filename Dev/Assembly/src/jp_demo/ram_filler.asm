@@ -3,7 +3,7 @@ LDI REB, #0xC       ; start address of RAM filling
 
 LDI REA, #1         ; increment value
 
-:Loop     
+Loop:     
     STR REB, REX    ; store the value in RAM at address REB
 
     ADD REA, REB    ; increment address

@@ -9,11 +9,16 @@ def GenerateDestinationRegister(pRegister):
     return (pRegister & 0x1F) << 13
 
 INSTRUCITON_SET = {
+    # System Operations
     'NOP': 0x00,
     'HALT': 0x01,
+    
+    # Data Movement
     'MOV': 0x02,
     'LDI': [0x03, 0x04],
     'STR': [0x05, 0x06],
+    
+    # ALU Operations
     'ADD': 0x07,
     'SUB': 0x08,
     'MUL': 0x09,
@@ -22,7 +27,8 @@ INSTRUCITON_SET = {
     'AND': 0x0C,
     'OR': 0x0D,
     'XOR': 0x0E,
-    
+
+    # Control Flow    
     'JP': [0x0F, 0x10],
 }
 
@@ -84,23 +90,26 @@ class Assembler:
         address_counter = 0
         
         for line in self.RawLines:
+            # 1. Strip comments and whitespace
+            if ';' in line:
+                line = line[:line.find(';')]
             line = line.strip()
-            if not line or line.startswith(';'):
+
+            if not line:
                 continue
 
-            # 1. Check for Label Definition
-            if line.startswith(':'):
+            # 2. Check for Label Definition
+            if line.endswith(':'):
                 label_name = line[1:].strip().upper()
                 if label_name in self.Labels:
                     raise SyntaxError(f"Duplicate label definition: {label_name}")
                 self.Labels[label_name] = address_counter
                 continue # Labels don't consume memory
 
-            # 2. Estimate Instruction Size (Consume memory)
+            # 3. Estimate Instruction Size (Consume memory)
             parts = line.split(maxsplit=1)
             mnemonic = parts[0].upper()
 
-            # Skip instruction if mnemonic is not in the set (for safety, though it'll fail later)
             if mnemonic not in self.InstructionSet:
                 continue 
 
@@ -111,24 +120,25 @@ class Assembler:
                 operands_str = parts[1] if len(parts) > 1 else ''
                 operands = [op.strip() for op in operands_str.split(',')]
                 
-                # Heuristics to check for 2-word instructions
                 if mnemonic == 'JP' and not hasattr(self.Registers, operands[0].upper()) and not hasattr(self.PortRegisters, operands[0].upper()):
-                    # JP followed by immediate/label is 2 words (JP 0xAddr or JP Label)
                     is_two_word = True
                 
                 elif mnemonic in ['LDI', 'STR']:
-                    # LDI R, #Value OR LDI R, [Addr] OR STR R, [Addr]
-                    # We check for a non-register second operand (Immediate or Direct Address)
                     second_operand = operands[1] if len(operands) > 1 else ''
                     if second_operand.startswith('#') or second_operand.startswith('['):
                         is_two_word = True
 
             address_counter += 2 if is_two_word else 1
-      
+     
     def CompileInstruction(self, pLine: str):
         """Pass 2: Processes a single line of assembly and adds bytecode."""
+        
+        # 1. Strip comments and whitespace
+        if ';' in pLine:
+            pLine = pLine[:pLine.find(';')]
         pLine = pLine.strip()
-        if not pLine or pLine.startswith(';') or pLine.startswith(':'):
+
+        if not pLine or pLine.startswith(':'):
             return
 
         parts = pLine.split(maxsplit=1)
@@ -136,6 +146,7 @@ class Assembler:
         
         operands = []
         if len(parts) > 1:
+            # Note: This split/strip handles internal comments as well if they were not already removed (e.g., MOV R1, R2 ; comment)
             operands = [op.strip() for op in parts[1].split(',')]
 
         bytecodeWord = 0
@@ -146,14 +157,13 @@ class Assembler:
         
         # --- 0. NOP, HALT (Zero Operand) ---- #
         if mnemonic in ['NOP', 'HALT']:
-            if len(operands) != 0:
+            if len(operands) > 1: # Check if there are no operands
                 raise SyntaxError(f"{mnemonic} takes no operands.")
             bytecodeWord = self.InstructionSet[mnemonic]
 
-        # --- 1. MOV, ALU (Two Operand: DEST, SRC) ---
-        elif mnemonic in ['MOV', 'ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'AND', 'OR', 'XOR']:
+        elif mnemonic == 'MOV':
             if len(operands) != 2:
-                raise SyntaxError(f"{mnemonic} requires two operands: Dest, Src.")
+                raise SyntaxError(f"{mnemonic} requires two or non operands: (Dest, Src).")
             
             destType, destVal = self.ParseOperand(operands[0])
             srcType, srcVal = self.ParseOperand(operands[1])
@@ -163,10 +173,27 @@ class Assembler:
 
             opcode = self.InstructionSet[mnemonic]
             bytecodeWord = opcode
-            bytecodeWord |= GenerateSourceRegister(srcVal) # Src is the second operand
-            bytecodeWord |= GenerateDestinationRegister(destVal) # Dest is the first operand
+            bytecodeWord |= GenerateSourceRegister(srcVal)
+            bytecodeWord |= GenerateDestinationRegister(destVal)
+            
         
-        # --- 2. LDI (Load) Overloading: LDI R_dest, #Value or LDI R_dest, [Address] ---
+        # TODO: make ALU operations more flexible (e.g., support immediate values: ADD R1, #5 or SUB R1, [0x100] or MUL #10, #20)
+        elif mnemonic in ['ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'AND', 'OR', 'XOR']:
+            if len(operands) == 1 or len(operands) > 2:
+                raise SyntaxError(f"{mnemonic} requires two or non operands: Reg1, Reg2.")
+            
+            destType, destVal = self.ParseOperand(operands[0] if len(operands) else 'REA') # Using A/ B register as default for operation
+            srcType, srcVal = self.ParseOperand(operands[1] if len(operands) else 'REB')
+
+            if destType != 'register' or srcType != 'register':
+                raise SyntaxError(f"{mnemonic} only supports Register/Port operands (Dest, Src).")
+
+            opcode = self.InstructionSet[mnemonic]
+            bytecodeWord = opcode
+            bytecodeWord |= GenerateSourceRegister(srcVal)
+            bytecodeWord |= GenerateDestinationRegister(destVal)
+        
+        # --- 2. LDI (Load) Overloading ---
         elif mnemonic == 'LDI':
             if len(operands) != 2:
                 raise SyntaxError(f"LDI requires two operands: Dest, Src.")
@@ -177,22 +204,20 @@ class Assembler:
             if destType != 'register':
                  raise SyntaxError(f"LDI destination must be a Register/Port.")
             
-            # LDI R_dest, #Value (Load Immediate)
             if srcType == 'immediate':
                 opcode = self.InstructionSet['LDI'][0]
                 bytecodeWord = opcode | GenerateDestinationRegister(destVal)
-                extraWord = srcVal # The 24-bit immediate value
+                extraWord = srcVal
             
-            # LDI R_dest, [Address] (Load Direct)
             elif srcType == 'direct_address':
                 opcode = self.InstructionSet['LDI'][1]
                 bytecodeWord = opcode | GenerateDestinationRegister(destVal)
-                extraWord = srcVal # The 24-bit address
+                extraWord = srcVal
 
             else:
                  raise SyntaxError(f"LDI source must be Immediate (#) or Direct Address ([]).")
 
-        # --- 3. STR (Store) Overloading: STR R_src, [Address] or STR R_src, R_addr ---
+        # --- 3. STR (Store) Overloading ---
         elif mnemonic == 'STR':
             if len(operands) != 2:
                 raise SyntaxError(f"STR requires two operands: Src, Dest_Address.")
@@ -203,22 +228,21 @@ class Assembler:
             if srcType != 'register':
                  raise SyntaxError(f"STR source must be a Register/Port.")
             
-            # STR R_src, [Address] (Store Direct) -> Opcode 0x05
             if destType == 'direct_address':
-                opcode = self.InstructionSet['STR'][0] # 0x05
+                opcode = self.InstructionSet['STR'][0]
                 bytecodeWord = opcode | GenerateSourceRegister(srcVal)
                 extraWord = destVal
 
-            # STR R_src, R_addr (Store Indirect) -> Opcode 0x06
             elif destType == 'register':
-                opcode = self.InstructionSet['STR'][1] # 0x06
+                opcode = self.InstructionSet['STR'][1]
                 bytecodeWord = opcode 
-                bytecodeWord |= GenerateSourceRegister(srcVal) # R_src is the data source
-                bytecodeWord |= GenerateDestinationRegister(destVal) # R_addr is the address register
+                bytecodeWord |= GenerateSourceRegister(srcVal)
+                bytecodeWord |= GenerateDestinationRegister(destVal)
 
             else:
                  raise SyntaxError(f"STR destination must be Direct Address ([]) or Address Register (R/EP).")
-             
+            
+        # --- 4. JP (Jump) Overloading ---
         elif mnemonic == 'JP':
             if len(operands) != 1:
                 raise SyntaxError(f"JP requires one operand: Address, Label, or Register.")
@@ -230,7 +254,6 @@ class Assembler:
                 opcode = self.InstructionSet['JP'][0] # 0x0F
 
                 if opType == 'symbol':
-                    # Resolve label address from Pass 1
                     if opVal not in self.Labels:
                         raise SyntaxError(f"Undefined label: {opVal}")
                     jump_address = self.Labels[opVal]
@@ -238,13 +261,15 @@ class Assembler:
                     jump_address = opVal
 
                 bytecodeWord = opcode 
-                extraWord = jump_address # The 24-bit jump address
+                extraWord = jump_address
 
             # JP REA (Jump Indirect) -> Opcode 0x10
             elif opType == 'register':
                 opcode = self.InstructionSet['JP'][1] # 0x10
                 bytecodeWord = opcode | GenerateSourceRegister(opVal) # Use Source field for jump register
-                bytecodeWord |= GenerateDestinationRegister(Register.PC)
+                # Note: The Destination register might need to be PC for some architectures, 
+                # but we'll assume the Opcode 0x10 microcode handles the jump implicitly.
+                # If your hardware requires the destination field to hold a register (e.g., R0), adjust here.
 
             else:
                 raise SyntaxError(f"JP operand must be an Address, Label, or Register.")
@@ -275,12 +300,10 @@ class Assembler:
             try:
                 self.CompileInstruction(line)
             except Exception as e:
-                 # Raise the exception with the full line for better debugging
                 print(f"Error compiling line: '{line.strip()}' -> {e}")
                 raise 
         
-        return self.Bytecode
-                
+        return self.Bytecode               
 
 assembler = Assembler(INSTRUCITON_SET, Register, ExpasionPortRegister)
 
