@@ -1,3 +1,5 @@
+import re
+import sys
 from Values.Registers import *
 
 def GenerateSourceRegister(pRegister):
@@ -20,6 +22,8 @@ INSTRUCITON_SET = {
     'AND': 0x0C,
     'OR': 0x0D,
     'XOR': 0x0E,
+    
+    'JP': [0x0F, 0x10],
 }
 
 class Assembler:
@@ -29,6 +33,8 @@ class Assembler:
         self.PortRegisters = pPortRegisters
         self.Bytecode: list[int] = []
         self.CurrentAddress = 0
+        self.Labels = {}
+        self.RawLines = []
 
     def ParseRegister(self, pToken: str) -> int:
         """Looks up a register mnemonic and returns its 5-bit ID."""
@@ -41,12 +47,10 @@ class Assembler:
     def ParseOperand(self, pOperand: str):
         """Determines the type and value of an operand."""
         pOperand = pOperand.strip()
-        print(pOperand)
         
         # 1. Immediate Value: #100 or #0xA0
         if pOperand.startswith('#'):
             try:
-                # Handle both decimal and hex: #100 or #0x64
                 value = int(pOperand[1:], 0)
                 return 'immediate', value
             except ValueError:
@@ -56,7 +60,6 @@ class Assembler:
         elif pOperand.startswith('[') and pOperand.endswith(']'):
             addressStr = pOperand[1:-1].strip()
             try:
-                # Handle both decimal and hex: [4096] or [0x1000]
                 address = int(addressStr, 0)
                 return 'direct_address', address
             except ValueError:
@@ -65,20 +68,69 @@ class Assembler:
         # 3. Register/Port: R0, EP1
         elif hasattr(self.Registers, pOperand.upper()):
             return 'register', self.ParseRegister(pOperand)
-
         elif hasattr(self.PortRegisters, pOperand.upper()):
             return 'register', self.ParsePortRegister(pOperand)
+        
+        # 4. Label/Symbol (Used in JP instructions)
+        elif re.match(r'^[A-Z_][A-Z0-9_]*$', pOperand.upper()):
+            return 'symbol', pOperand.upper()
         
         else:
             raise ValueError(f"Unrecognized operand format: {pOperand}")
 
+    def ResolveLabels(self):
+        """Pass 1: Scans code to find and record the address of every label."""
+        self.Labels = {}
+        address_counter = 0
+        
+        for line in self.RawLines:
+            line = line.strip()
+            if not line or line.startswith(';'):
+                continue
+
+            # 1. Check for Label Definition
+            if line.startswith(':'):
+                label_name = line[1:].strip().upper()
+                if label_name in self.Labels:
+                    raise SyntaxError(f"Duplicate label definition: {label_name}")
+                self.Labels[label_name] = address_counter
+                continue # Labels don't consume memory
+
+            # 2. Estimate Instruction Size (Consume memory)
+            parts = line.split(maxsplit=1)
+            mnemonic = parts[0].upper()
+
+            # Skip instruction if mnemonic is not in the set (for safety, though it'll fail later)
+            if mnemonic not in self.InstructionSet:
+                continue 
+
+            is_two_word = False
+            
+            # Check for two-word instructions (LDI/STR/JP direct)
+            if mnemonic in ['LDI', 'STR', 'JP']:
+                operands_str = parts[1] if len(parts) > 1 else ''
+                operands = [op.strip() for op in operands_str.split(',')]
+                
+                # Heuristics to check for 2-word instructions
+                if mnemonic == 'JP' and not hasattr(self.Registers, operands[0].upper()) and not hasattr(self.PortRegisters, operands[0].upper()):
+                    # JP followed by immediate/label is 2 words (JP 0xAddr or JP Label)
+                    is_two_word = True
+                
+                elif mnemonic in ['LDI', 'STR']:
+                    # LDI R, #Value OR LDI R, [Addr] OR STR R, [Addr]
+                    # We check for a non-register second operand (Immediate or Direct Address)
+                    second_operand = operands[1] if len(operands) > 1 else ''
+                    if second_operand.startswith('#') or second_operand.startswith('['):
+                        is_two_word = True
+
+            address_counter += 2 if is_two_word else 1
+      
     def CompileInstruction(self, pLine: str):
-        """Processes a single line of assembly and adds bytecode."""
+        """Pass 2: Processes a single line of assembly and adds bytecode."""
         pLine = pLine.strip()
-        if not pLine or pLine.startswith(';'):
+        if not pLine or pLine.startswith(';') or pLine.startswith(':'):
             return
 
-        # Split instruction and operands (comma separated)
         parts = pLine.split(maxsplit=1)
         mnemonic = parts[0].upper()
         
@@ -91,7 +143,7 @@ class Assembler:
 
         if mnemonic not in self.InstructionSet:
             raise ValueError(f"Unknown instruction mnemonic: {mnemonic}")
-
+        
         # --- 0. NOP, HALT (Zero Operand) ---- #
         if mnemonic in ['NOP', 'HALT']:
             if len(operands) != 0:
@@ -145,8 +197,8 @@ class Assembler:
             if len(operands) != 2:
                 raise SyntaxError(f"STR requires two operands: Src, Dest_Address.")
             
-            srcType, srcVal = self.parse_operand(operands[0])
-            destType, destVal = self.parse_operand(operands[1])
+            srcType, srcVal = self.ParseOperand(operands[0])
+            destType, destVal = self.ParseOperand(operands[1])
 
             if srcType != 'register':
                  raise SyntaxError(f"STR source must be a Register/Port.")
@@ -166,6 +218,38 @@ class Assembler:
 
             else:
                  raise SyntaxError(f"STR destination must be Direct Address ([]) or Address Register (R/EP).")
+             
+        elif mnemonic == 'JP':
+            if len(operands) != 1:
+                raise SyntaxError(f"JP requires one operand: Address, Label, or Register.")
+
+            opType, opVal = self.ParseOperand(operands[0])
+
+            # JP Label or JP 0xAddress (Jump Absolute) -> Opcode 0x0F
+            if opType in ['immediate', 'direct_address', 'symbol']:
+                opcode = self.InstructionSet['JP'][0] # 0x0F
+
+                if opType == 'symbol':
+                    # Resolve label address from Pass 1
+                    if opVal not in self.Labels:
+                        raise SyntaxError(f"Undefined label: {opVal}")
+                    jump_address = self.Labels[opVal]
+                else:
+                    jump_address = opVal
+
+                bytecodeWord = opcode 
+                extraWord = jump_address # The 24-bit jump address
+
+            # JP REA (Jump Indirect) -> Opcode 0x10
+            elif opType == 'register':
+                opcode = self.InstructionSet['JP'][1] # 0x10
+                bytecodeWord = opcode | GenerateSourceRegister(opVal) # Use Source field for jump register
+                bytecodeWord |= GenerateDestinationRegister(Register.PC)
+
+            else:
+                raise SyntaxError(f"JP operand must be an Address, Label, or Register.")
+
+        # --- END OF INSTRUCTION LOGIC ---
 
         # Add instruction word
         self.Bytecode.append(bytecodeWord)
@@ -177,29 +261,47 @@ class Assembler:
             self.CurrentAddress += 1
 
     def Compile(self, AssemblyCode: str) -> list[int]:
-        """Compiles the full assembly code string."""
+        """Compiles the full assembly code string using two passes."""
+        self.RawLines = AssemblyCode.split('\n')
+        
+        # Pass 1: Resolve Labels
+        self.ResolveLabels() 
+
+        # Pass 2: Compile Instructions
         self.Bytecode = []
         self.CurrentAddress = 0
-        lines = AssemblyCode.split('\n')
         
-        for line in lines:
-            self.CompileInstruction(line)
+        for line in self.RawLines:
+            try:
+                self.CompileInstruction(line)
+            except Exception as e:
+                 # Raise the exception with the full line for better debugging
+                print(f"Error compiling line: '{line.strip()}' -> {e}")
+                raise 
         
         return self.Bytecode
                 
-                
 
 assembler = Assembler(INSTRUCITON_SET, Register, ExpasionPortRegister)
-byteCode = assembler.Compile("""
-LDI REA, #2
-LDI REB, #10
-MOV EP0, REA
-MOV EP1, REB
-HALT
-""")
 
- # format to where 000000 000000 
-print("v2.0 raw")
-for i in range(0, len(byteCode), 4):
-    row = byteCode[i:i+4]
-    print(' '.join(f"{word:06X}" for word in row))
+inputFile = sys.argv[1]
+outputFile = sys.argv[2]
+
+if (inputFile is None) or (outputFile is None):
+    print("Usage: python AssemblyCompiler.py <input.asm> <output>")
+    sys.exit(1)
+
+with open(inputFile) as file:
+    byteCode = assembler.Compile(file.read())
+
+with open(outputFile+".o", mode="w") as file:
+    fileContent = "v2.0 raw\n"
+    for i in range(0, len(byteCode), 4):
+        row = byteCode[i:i+4]
+        fileContent += ' '.join(f"{word:06X}" for word in row) + "\n"
+        
+    file.write(fileContent)
+
+print("File generated:", outputFile)
+print("Content:")
+print(fileContent)

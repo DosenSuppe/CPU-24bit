@@ -1,6 +1,3 @@
-from Registers import *
-
-
 # micro instructions
 INSTRUCTION_LOAD = 1 << 0
 ENABLE_PC = 1 << 1
@@ -19,7 +16,7 @@ def GenerateALUOperation(pOperation: int) -> int:
 ENABLE_RAM_OUTPUT = 1 << 15
 ENABLE_SOURCE_REGISTER = 1 << 16
 
-def GenerateDestinationRegister(pRegister: int) -> int:
+def GenerateRegister(pRegister: int) -> int:
     return (pRegister & 0x1F) << 17
 
 REGISTER_LOAD = 1 << 22

@@ -115,6 +115,26 @@ instruction_set = [
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.XOR)])
     },
+    
+    # control flow instructions
+    { 
+        'name': 'jp', # jump to address: JP 0xff0000 or JP Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([
+            MI.LOAD_PC_AS_RAM_ADDRESS,
+            GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
+        ])
+    },
+    {
+        'name': 'jp_addr', # jump to address in register: JP REA
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        
+        # same as MOV, (might as well remove this later and use the compiler to generate the MOV instruction)
+        'steps': generateInstruction([ENABLE_SOURCE_REGISTER | REGISTER_STORE]) 
+    },
+    
+    
+    
 ]
 
 def cast_array(value):
