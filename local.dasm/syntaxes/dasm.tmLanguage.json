@@ -15,6 +15,12 @@
             "include": "#registers"
         },
         {
+            "include": "#namespaced-references"
+        },
+        {
+            "include": "#label-references"
+        },
+        {
             "include": "#keywords"
         },
         {
@@ -35,14 +41,8 @@
             }]
         },
         "sections": {
-            "begin": "^\\s*\\.",
-            "end": "\\s",
-            "patterns": [
-                {
-                    "name": "entity.name.section.dasm",
-                    "match": "\\.[a-zA-Z_][a-zA-Z0-9_]*"
-                }
-            ]
+            "name": "entity.name.function.section.dasm",
+            "match": "^\\s*\\.([a-zA-Z_][a-zA-Z0-9_.]*)"
         },
         "registers": {
             "name": "variable.parameter.register.dasm",
@@ -51,6 +51,49 @@
         "labels": {
             "name": "entity.name.function.label.dasm",
             "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_.]*):"
+        },
+        "namespaced-references": {
+            "name": "entity.name.function.namespaced-label.dasm",
+            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+            "captures": {
+                "1": {
+                    "name": "variable.other.namespace.dasm"
+                },
+                "2": {
+                    "name": "entity.name.function.label.dasm"
+                }
+            }
+        },
+        "label-references": {
+            "patterns": [
+                {
+                    "name": "meta.jump-namespaced.dasm",
+                    "match": "\\b(JP|JPZ|JPC|CALL)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.dasm"
+                        },
+                        "2": {
+                            "name": "variable.other.namespace.dasm"
+                        },
+                        "3": {
+                            "name": "entity.name.function.label.dasm"
+                        }
+                    }
+                },
+                {
+                    "name": "meta.jump-label.dasm",
+                    "match": "\\b(JP|JPZ|JPC|CALL)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.dasm"
+                        },
+                        "2": {
+                            "name": "entity.name.function.label.dasm"
+                        }
+                    }
+                }
+            ]
         },
         "strings": {
             "name": "string.quoted.double.dasm",
