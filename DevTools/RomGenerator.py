@@ -19,27 +19,38 @@ INSTRUCTION_END = [INSTRUCTION_READ]
 def generateInstruction(pInstruction: list[int] = []):
     return FETCH + [instruction for instruction in pInstruction] + INSTRUCTION_END
 
+# shared across multiple jump instructions:
+JUMP_INSTRUCTION = generateInstruction([
+    MI.LOAD_PC_AS_RAM_ADDRESS,
+    GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
+])
+
+JUMP_ADDR_INSTRUCTION = generateInstruction([
+    ENABLE_SOURCE_REGISTER | REGISTER_LOAD
+])
+
+
 instruction_set = [
     {   
-        'name': 'nop',
+        'name': 'nop', 'op_code': 0x00,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction()
     },
     {
-        'name': 'halt',
+        'name': 'halt', 'op_code': 0x01,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
         'steps': generateInstruction([HALT])
     },
     
     # data movement instructions
     {
-        'name': 'mov', # moving between registers
+        'name': 'mov', 'op_code': 0x02, # moving between registers
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([ENABLE_SOURCE_REGISTER | REGISTER_STORE])
     },
     
     {
-        'name': 'ldi', # loading immediate to register
+        'name': 'ldi', 'op_code': 0x03, # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
             MI.LOAD_PC_AS_RAM_ADDRESS, 
@@ -47,7 +58,7 @@ instruction_set = [
         ])
     },
     {
-        'name': 'ldi_addr', # loading immediate from RAM location into register
+        'name': 'ldi_addr', 'op_code': 0x04, # loading immediate from RAM location into register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
             MI.LOAD_PC_AS_RAM_ADDRESS,
@@ -55,9 +66,17 @@ instruction_set = [
             MI.READ_RAM | REGISTER_STORE 
         ])
     },
+    {
+        'name': 'ldi_addr_reg', 'op_code': 0x18, # loading immediate from RAM location from register value into register : LDI REB, [REX]
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([
+            ENABLE_SOURCE_REGISTER | RAM_ADDRESS_LOAD,
+            MI.READ_RAM | REGISTER_STORE 
+        ])
+    },
     
     {
-        'name': 'str', # storing register value to RAM location : STR 0xff0000, REA
+        'name': 'str', 'op_code': 0x05, # storing register value to RAM location : STR 0xff0000, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
             MI.LOAD_PC_AS_RAM_ADDRESS,
@@ -66,7 +85,7 @@ instruction_set = [
         ])
     },
     {
-        'name': 'str_addr', # storing value to RAM location from RAM address in register : STR REB, REA
+        'name': 'str_addr', 'op_code': 0x06, # storing value to RAM location from RAM address in register : STR REB, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
             ENABLE_SOURCE_REGISTER | RAM_ADDRESS_LOAD,
@@ -76,64 +95,134 @@ instruction_set = [
     
     # ALU Operations
     {
-        'name': 'add',
+        'name': 'add', 'op_code': 0x07,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.ADD)])
     },
     {
-        'name': 'sub',
+        'name': 'sub', 'op_code': 0x08,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SUB)])
     },
     {
-        'name': 'mul',
+        'name': 'mul', 'op_code': 0x09,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.MUL)])
     },
     {
-        'name': 'div',
+        'name': 'div', 'op_code': 0x0A,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.DIV)])
     },
     {
-        'name': 'shl', # shift bits to left
+        'name': 'shl', 'op_code': 0x0B, # shift bits to left
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SHL)])
     },
     {
-        'name': 'and',
+        'name': 'and', 'op_code': 0x0C,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.AND)])
     },
     {
-        'name': 'or',
+        'name': 'or', 'op_code': 0x0D,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.OR)])
     },
     {
-        'name': 'xor',
+        'name': 'xor', 'op_code': 0x0E,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.XOR)])
     },
     
     # control flow instructions
     { 
-        'name': 'jp', # jump to address: JP 0xff0000 or JP Label
+        'name': 'jp', 'op_code': 0x0F, # jump to address: JP 0xff0000 or JP Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jp_addr', 'op_code': 0x10, # jump to address in register: JP REA
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        
+        # same as MOV, (might as well remove this later and use the compiler to generate the MOV instruction)
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jpz', 'op_code': 0x11, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jpz_false', 'op_code': 0x11, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([ENABLE_PC])
+    },
+    
+    {
+        'name': 'jpz_addr', 'op_code': 0x12, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jpz_addr_false', 'op_code': 0x12, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([ENABLE_PC])
+    },
+    
+    {
+        'name': 'jpc', 'op_code': 0x13, # jump if carry flag is set
+        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jpc_false', 'op_code': 0x13, # jump if carry flag is set
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([ENABLE_PC])
+    },
+    {
+        'name': 'jpc_addr', 'op_code': 0x14, # jump if zero flag is set
+        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jpc_addr_false', 'op_code': 0x14, # jump if zero flag is set
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([ENABLE_PC])
+    },
+    
+    {
+        'name': 'call', 'op_code': 0x15, # call subroutine at address: CALL 0xff0000 or CALL Label
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
+            MI.LOAD_PC_AS_RAM_ADDRESS,
+            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
+            RAM_WRITE | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.PC) | ENABLE_SP,
             MI.LOAD_PC_AS_RAM_ADDRESS,
             GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
         ])
     },
     {
-        'name': 'jp_addr', # jump to address in register: JP REA
+        'name': 'call_addr', 'op_code': 0x16, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        
-        # same as MOV, (might as well remove this later and use the compiler to generate the MOV instruction)
-        'steps': generateInstruction([ENABLE_SOURCE_REGISTER | REGISTER_STORE]) 
+        'steps': generateInstruction([
+            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
+            RAM_WRITE | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.PC) | ENABLE_SP,
+            ENABLE_SOURCE_REGISTER | REGISTER_LOAD
+        ])
     },
     
-    
+    {
+        'name': 'rts', 'op_code': 0x17,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([
+            DECREMENT_SP | ENABLE_SP,
+            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
+            MI.READ_RAM | GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE,
+            ENABLE_PC,
+            MI.LOAD_PC_AS_RAM_ADDRESS
+        ])
+    }
     
 ]
 
@@ -168,13 +257,13 @@ def create_instruction_microcode(instruction):
 instructions = {}
 def generate_microcode(instruction_set):
     global instructions
-    currentOpCode = 0
+    
     
     microcode = {}
     for instruction in instruction_set:
-        instruction['op_code'] = currentOpCode
-        instructions[instruction['name']] = f"0x{currentOpCode:06X}"
-        currentOpCode += 1
+        
+        instructions[instruction['name']] = f"0x{instruction['op_code']:04X}"
+
         steps = create_instruction_microcode(instruction)
         for step in steps:
             if step['address'] in microcode:
@@ -212,7 +301,7 @@ if __name__ == "__main__":
     pprint(f"Microcode generation complete. Opcodes:\n{instructions}")
     
     try:
-        SaveRom.save_file("bytecode/cpu_microcode.rom", final_rom_data, 24)
+        SaveRom.save_file("machinecode/machinecode.rom", final_rom_data, 24)
         print("ROM data saved successfully.")
     except Exception as e:
         print(f"Failed to save ROM file: {e}")

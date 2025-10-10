@@ -1,0 +1,103 @@
+{
+  "filename": ".\\examples\\src\\string_example.asm",
+  "segments": {
+    "CODE": [
+      114691,
+      15728895,
+      40963,
+      64,
+      32771,
+      1193046,
+      21,
+      0,
+      132098,
+      1,
+      1029,
+      3840,
+      32771,
+      0,
+      132376,
+      21,
+      0,
+      41474,
+      21,
+      0,
+      33282,
+      514,
+      8195,
+      4,
+      17,
+      0,
+      15,
+      0,
+      1026,
+      8195,
+      1,
+      263,
+      23,
+      1282,
+      8195,
+      1,
+      263,
+      23,
+      32772,
+      3840,
+      23
+    ]
+  },
+  "labels": {
+    "PRINTSTRING": [
+      "CODE",
+      10
+    ],
+    "PRINTLOOP": [
+      "CODE",
+      14
+    ],
+    "PRINTINCREMENTCOUNTER": [
+      "CODE",
+      28
+    ],
+    "PRINTINCREMENTCHARACTER": [
+      "CODE",
+      33
+    ],
+    "PRINTEND": [
+      "CODE",
+      38
+    ]
+  },
+  "relocations": [
+    {
+      "segment": "CODE",
+      "offset": 7,
+      "type": "absolute",
+      "symbol": "PRINTSTRING"
+    },
+    {
+      "segment": "CODE",
+      "offset": 16,
+      "type": "absolute",
+      "symbol": "PRINTINCREMENTCHARACTER"
+    },
+    {
+      "segment": "CODE",
+      "offset": 19,
+      "type": "absolute",
+      "symbol": "PRINTINCREMENTCOUNTER"
+    },
+    {
+      "segment": "CODE",
+      "offset": 25,
+      "type": "absolute",
+      "symbol": "PRINTEND"
+    },
+    {
+      "segment": "CODE",
+      "offset": 27,
+      "type": "absolute",
+      "symbol": "PRINTLOOP"
+    }
+  ],
+  "imports": []
+}

@@ -19,7 +19,7 @@ class Register:
     SP = 0xE
     PC = 0xF
     
-class ExpasionPortRegister:
+class ExpansionPortRegister:
     EP0 = 0x10
     EP1 = 0x11
     EP2 = 0x12
