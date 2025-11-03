@@ -9,11 +9,7 @@ from Values.Registers import *
 from Values.MicroInstructions import MicroInstructions as MI
 from Values.OperationsALU import ALU
 
-FETCH = [
-    MI.LOAD_PC_AS_RAM_ADDRESS, 
-    MI.READ_RAM | ENABLE_PC | INSTRUCTION_LOAD
-]
-
+FETCH = [MI.LOAD_PC_AS_RAM_ADDRESS | MI.READ_RAM | ENABLE_PC | INSTRUCTION_LOAD]
 INSTRUCTION_END = [INSTRUCTION_READ]
 
 def generateInstruction(pInstruction: list[int] = []):

@@ -1,0 +1,22 @@
+.Code
+LDI SP, #0xF00000
+
+LDI REX, #2
+LDI REY, #2
+
+CALL PackXY
+MOV EP0, ACC
+
+HALT
+
+PackXY:
+    MOV REA, REX
+    LDI REB, #5
+    SHL
+
+    MOV REA, ACC
+    MOV REB, REY
+    OR
+
+    RTS
+

@@ -7,6 +7,6 @@ ReadInput:
     MOV REA, EP0   
     JPZ End
     JP ReadInput
-
+    
 End:
     HALT

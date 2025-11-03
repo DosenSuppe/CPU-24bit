@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple
 class MemoryConfig:
     """Parses and stores memory configuration."""
     def __init__(self, config_file: str):
-        self.segments: Dict[str, Tuple[int, int]] = {}  # segment_name -> (start, size)
+        self.segments: Dict[str, Tuple[int, int]] = {}
         self._parse_config(config_file)
     
     def _parse_config(self, config_file: str):

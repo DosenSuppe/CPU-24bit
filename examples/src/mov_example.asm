@@ -1,0 +1,3 @@
+.Code
+MOV REX, REY
+HALT

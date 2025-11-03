@@ -5,14 +5,14 @@ import json
 from Values.Registers import *
 from typing import Dict, List, Tuple, Any
 
-# --- Utility Functions ---
+
 def GenerateSourceRegister(pRegister: int) -> int:
     return (pRegister & 0x1F) << 8
 
 def GenerateDestinationRegister(pRegister: int) -> int:
     return (pRegister & 0x1F) << 13
 
-# --- Instruction Set ---
+
 INSTRUCTION_SET = {
     'NOP': 0x00, 
     'HALT': 0x01,
@@ -34,15 +34,15 @@ INSTRUCTION_SET = {
     'RTS': 0x17
 }
 
-# --- Relocatable Object File Format ---
+
 class RelocatableObject:
     """Represents a compiled object file with relocation info."""
     def __init__(self, filename: str):
         self.filename = filename
-        self.segments: Dict[str, List[int]] = {}  # segment_name -> [bytecode words]
-        self.labels: Dict[str, Tuple[str, int]] = {}  # label -> (segment, offset)
-        self.relocations: List[Dict[str, Any]] = []  # [{segment, offset, type, symbol}]
-        self.imports: List[str] = []  # list of imported files
+        self.segments: Dict[str, List[int]] = {}  
+        self.labels: Dict[str, Tuple[str, int]] = {}  
+        self.relocations: List[Dict[str, Any]] = []  
+        self.imports: List[str] = [] 
         
     def to_dict(self) -> dict:
         return {
@@ -62,7 +62,7 @@ class RelocatableObject:
         obj.imports = data['imports']
         return obj
 
-# --- Assembler Class ---
+
 class Assembler:
     def __init__(self, pInstructionSet, pRegisters, pPortRegisters, pSourceDir='.'):
         self.InstructionSet = pInstructionSet
@@ -113,10 +113,9 @@ class Assembler:
         
         lines = assembly_code.split('\n')
         current_segment = None
-        segment_offset = 0  # offset within current segment
-        import_namespaces = {}  # maps import_file -> namespace
+        segment_offset = 0  
+        import_namespaces = {} 
         
-        # First pass: collect import namespaces
         for line in lines:
             if ';' in line:
                 line = line[:line.find(';')]
@@ -131,7 +130,6 @@ class Assembler:
                     namespace = match.group(2).upper() if match.group(2) else os.path.basename(import_file).replace('.asm', '').upper()
                     import_namespaces[import_file] = namespace
         
-        # Second pass: compile
         for line_num, line in enumerate(lines, 1):
             # Cleanup
             if ';' in line:
@@ -140,7 +138,6 @@ class Assembler:
             if not line:
                 continue
             
-            # Check for segment declaration
             if line.startswith('.'):
                 current_segment = line[1:].strip().upper()
                 if current_segment not in obj.segments:
