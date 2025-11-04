@@ -9,13 +9,14 @@ from Values.Registers import *
 from Values.MicroInstructions import MicroInstructions as MI
 from Values.OperationsALU import ALU
 
-FETCH = [MI.LOAD_PC_AS_RAM_ADDRESS | MI.READ_RAM | ENABLE_PC | INSTRUCTION_LOAD]
-INSTRUCTION_END = [INSTRUCTION_READ]
+FETCH = [MI.LOAD_PC_AS_RAM_ADDRESS | MI.READ_RAM | PC_INCREMENT | INSTRUCTION_LOAD]
 
 def generateInstruction(pInstruction: list[int] = []):
-    return FETCH + [instruction for instruction in pInstruction] + INSTRUCTION_END
+    return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END]
 
 # shared across multiple jump instructions:
+"""
+
 JUMP_INSTRUCTION = generateInstruction([
     MI.LOAD_PC_AS_RAM_ADDRESS,
     GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
@@ -25,34 +26,40 @@ JUMP_ADDR_INSTRUCTION = generateInstruction([
     ENABLE_SOURCE_REGISTER | REGISTER_LOAD
 ])
 
+"""
+
 
 instruction_set = [
     {   
         'name': 'nop', 'op_code': 0x00,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]}, 
         'steps': generateInstruction()
     },
     {
         'name': 'halt', 'op_code': 0x01,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]}, 
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]}, 
         'steps': generateInstruction([HALT])
     },
     
     # data movement instructions
     {
         'name': 'mov', 'op_code': 0x02, # moving between registers
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([ENABLE_SOURCE_REGISTER | REGISTER_STORE])
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GPR_DATA_OUT | GPR_WRITE | PC_ADDRESS_OUT])
     },
-    
     {
         'name': 'ldi', 'op_code': 0x03, # loading immediate to register
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             MI.LOAD_PC_AS_RAM_ADDRESS, 
-            MI.READ_RAM | REGISTER_STORE | ENABLE_PC
+            MI.READ_RAM | GPR_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
         ])
     },
+]
+
+"""
+    
+    
     {
         'name': 'ldi_addr', 'op_code': 0x04, # loading immediate from RAM location into register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
@@ -218,9 +225,7 @@ instruction_set = [
             ENABLE_PC,
             MI.LOAD_PC_AS_RAM_ADDRESS
         ])
-    }
-    
-]
+    }"""
 
 def cast_array(value):
     return value if isinstance(value, list) else [value]
@@ -232,21 +237,23 @@ def create_instruction_microcode(instruction):
     zf_states = instruction['flags'].get('z', [0, 1])
     ltf_states = instruction['flags'].get('l', [0, 1])
     gtf_states = instruction['flags'].get('g', [0, 1])
+    etf_states = instruction['flags'].get('e', [0, 1]) # TODO: implement 'e' flag handling
 
     for cf in cf_states:
         for zf in zf_states:
             for ltf in ltf_states:
                 for gtf in gtf_states:
-                    flag_value = (cf << 3) | (zf << 2) | (ltf << 1) | gtf
-                    
-                    for step_index, control_word in enumerate(instruction['steps']):
-                        address = (flag_value << 20) | (instruction['op_code'] << 4) | step_index
-                        
-                        microcode_steps.append({
-                            'name': instruction['name'],
-                            'address': address,
-                            'flag': control_word
-                        })
+                    for etf in etf_states:
+                        flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (gtf << 1) | etf
+
+                        for step_index, control_word in enumerate(instruction['steps']):
+                            address = (flag_value << 19) | (instruction['op_code'] << 4) | step_index
+                            
+                            microcode_steps.append({
+                                'name': instruction['name'],
+                                'address': address,
+                                'flag': control_word
+                            })
                         
     return microcode_steps
 
@@ -256,8 +263,7 @@ def generate_microcode(instruction_set):
     
     
     microcode = {}
-    for instruction in instruction_set:
-        
+    for instruction in instruction_set:        
         instructions[instruction['name']] = f"0x{instruction['op_code']:04X}"
 
         steps = create_instruction_microcode(instruction)
@@ -272,7 +278,8 @@ def generate_microcode(instruction_set):
 
 def fill_microcode_addresses(microcode):
     
-    MAX_ROM_ADDRESS = (0xFFFF << 4) | (0xF << 20) | 0xF
+    MAX_ROM_ADDRESS = (0x1F << 19) | (0xFF << 4) | 0xF
+    print(f"MAX_ROM_ADDRESS: {MAX_ROM_ADDRESS} (0x{MAX_ROM_ADDRESS:06X})")
     
     final_output = [0] * (MAX_ROM_ADDRESS + 1)
     

@@ -28,8 +28,6 @@ BUS_GRANT = 1 << 22
 
 HALT = 1 << 23
 
-
-
 def GenerateALUOperation(pOperation: int) -> int:
     return (pOperation & 0x7) << 12
 
