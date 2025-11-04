@@ -26,15 +26,17 @@ RAM_WRITE = 1 << 20
 MAR_WRITE = 1 << 21
 MAR_SOURCE_SELECT = 1 << 22  # 0 = from Address-Bus, 1 = from Data-Bus
 
+GPR_B_ADDRESS_OUT = 1 << 23
+GPR_B_DATA_OUT = 1 << 24
+GPR_B_WRITE = 1 << 25
+
 INTEERRUPT_REQUEST_ACKNOWLEDGE = 1 << 29
 BUS_GRANT = 1 << 30
 
 HALT = 1 << 31
 
 def GenerateALUOperation(pOperation: int) -> int:
-    return (pOperation & 0x7) << 12
-
-
+    return (pOperation & 0xF) << 11
 
 def GenerateRegister(pRegister: int) -> int:
     return (pRegister & 0x1F) << 17

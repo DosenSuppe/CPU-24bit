@@ -57,7 +57,7 @@ instruction_set = [
     },
     {
         'name': 'ldi_addr', 'op_code': 0x04, # loading immediate from RAM location into register
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             PC_ADDRESS_OUT | MAR_WRITE,
             PC_ADDRESS_OUT | RAM_READ | MAR_WRITE | MAR_SOURCE_SELECT,
@@ -66,74 +66,95 @@ instruction_set = [
     },
     {
         'name': 'ldi_addr_reg', 'op_code': 0x05, # loading immediate from RAM location from register value into register : LDI REB, [REX]
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             GPR_ADDRESS_OUT | MAR_WRITE,
             PC_ADDRESS_OUT | RAM_READ | GPR_WRITE
         ])
     },
-]
-
-"""
     {
-        'name': 'str', 'op_code': 0x05, # storing register value to RAM location : STR 0xff0000, REA
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'str', 'op_code': 0x06, # storing register value to RAM location : STR 0xff0000, REA
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            MI.LOAD_PC_AS_RAM_ADDRESS,
-            MI.LOAD_ADDRESS_FROM_RAM,
-            ENABLE_SOURCE_REGISTER | RAM_WRITE 
+            PC_ADDRESS_OUT | MAR_WRITE,
+            PC_ADDRESS_OUT | RAM_READ | MAR_WRITE | MAR_SOURCE_SELECT,
+            PC_ADDRESS_OUT | GPR_DATA_OUT | RAM_WRITE | PC_INCREMENT
         ])
     },
     {
-        'name': 'str_addr', 'op_code': 0x06, # storing value to RAM location from RAM address in register : STR REB, REA
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'str_addr', 'op_code': 0x07, # storing value to RAM location from RAM address in register : STR REB, REA
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            ENABLE_SOURCE_REGISTER | RAM_ADDRESS_LOAD,
-            REGISTER_LOAD | RAM_WRITE
+            GPR_ADDRESS_OUT | MAR_WRITE,                # load address from A-Register
+            PC_ADDRESS_OUT | GPR_B_DATA_OUT | RAM_WRITE # load value to write from B-Register
         ])
     },
     
-    # ALU Operations
+    # ALU Operations (ALU operations could be optimized to include the Instruction_End cycle within the ALU operation itself, making them 3 cycles instead of 4)
     {
-        'name': 'add', 'op_code': 0x07,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.ADD)])
+        'name': 'add', 'op_code': 0x08, # adding values with registers only (e.g. ADD REA, REB or ADD REA, REB, REZ)
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.ADD) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'sub', 'op_code': 0x08,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SUB)])
+        'name': 'sub', 'op_code': 0x09,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.SUB) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'mul', 'op_code': 0x09,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.MUL)])
+        'name': 'mul', 'op_code': 0x0A,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.MUL) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'div', 'op_code': 0x0A,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.DIV)])
+        'name': 'div', 'op_code': 0x0B,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.DIV) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'shl', 'op_code': 0x0B, # shift bits to left
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.SHL)])
+        'name': 'shl', 'op_code': 0x0C, # shift bits to left
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.SHL) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'and', 'op_code': 0x0C,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.AND)])
+        'name': 'shr', 'op_code': 0x0D,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.SHR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'or', 'op_code': 0x0D,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.OR)])
+        'name': 'nand', 'op_code': 0x0E,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.NAND) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
-        'name': 'xor', 'op_code': 0x0E,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([MI.STORE_ACC | GenerateALUOperation(ALU.XOR)])
+        'name': 'and', 'op_code': 0x0F,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.AND) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
+    {
+        'name': 'or', 'op_code': 0x10,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.OR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+    },
+    {
+        'name': 'xor', 'op_code': 0x11,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.XOR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+    },
+    {
+        'name': 'nor', 'op_code': 0x12,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.NOR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+    },
+    {
+        'name': 'not', 'op_code': 0x13,
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.NOT) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+    }
+]
+
+"""
+    
     
     # control flow instructions
     { 
