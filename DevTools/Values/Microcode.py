@@ -23,10 +23,13 @@ GPR_WRITE = 1 << 18
 RAM_READ = 1 << 19
 RAM_WRITE = 1 << 20
 
-INTEERRUPT_REQUEST_ACKNOWLEDGE = 1 << 21
-BUS_GRANT = 1 << 22
+MAR_WRITE = 1 << 21
+MAR_SOURCE_SELECT = 1 << 22  # 0 = from Address-Bus, 1 = from Data-Bus
 
-HALT = 1 << 23
+INTEERRUPT_REQUEST_ACKNOWLEDGE = 1 << 29
+BUS_GRANT = 1 << 30
+
+HALT = 1 << 31
 
 def GenerateALUOperation(pOperation: int) -> int:
     return (pOperation & 0x7) << 12

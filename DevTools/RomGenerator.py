@@ -9,7 +9,7 @@ from Values.Registers import *
 from Values.MicroInstructions import MicroInstructions as MI
 from Values.OperationsALU import ALU
 
-FETCH = [MI.LOAD_PC_AS_RAM_ADDRESS | MI.READ_RAM | PC_INCREMENT | INSTRUCTION_LOAD]
+FETCH = [MAR_WRITE | PC_ADDRESS_OUT,  PC_ADDRESS_OUT | RAM_READ | INSTRUCTION_LOAD | PC_INCREMENT]
 
 def generateInstruction(pInstruction: list[int] = []):
     return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END]
@@ -51,33 +51,30 @@ instruction_set = [
         'name': 'ldi', 'op_code': 0x03, # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            MI.LOAD_PC_AS_RAM_ADDRESS, 
-            MI.READ_RAM | GPR_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+            PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | GPR_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'ldi_addr', 'op_code': 0x04, # loading immediate from RAM location into register
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([
+            PC_ADDRESS_OUT | MAR_WRITE,
+            PC_ADDRESS_OUT | RAM_READ | MAR_WRITE | MAR_SOURCE_SELECT,
+            PC_ADDRESS_OUT | RAM_READ | GPR_WRITE | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'ldi_addr_reg', 'op_code': 0x05, # loading immediate from RAM location from register value into register : LDI REB, [REX]
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'steps': generateInstruction([
+            GPR_ADDRESS_OUT | MAR_WRITE,
+            PC_ADDRESS_OUT | RAM_READ | GPR_WRITE
         ])
     },
 ]
 
 """
-    
-    
-    {
-        'name': 'ldi_addr', 'op_code': 0x04, # loading immediate from RAM location into register
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([
-            MI.LOAD_PC_AS_RAM_ADDRESS,
-            MI.LOAD_ADDRESS_FROM_RAM,
-            MI.READ_RAM | REGISTER_STORE 
-        ])
-    },
-    {
-        'name': 'ldi_addr_reg', 'op_code': 0x18, # loading immediate from RAM location from register value into register : LDI REB, [REX]
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([
-            ENABLE_SOURCE_REGISTER | RAM_ADDRESS_LOAD,
-            MI.READ_RAM | REGISTER_STORE 
-        ])
-    },
-    
     {
         'name': 'str', 'op_code': 0x05, # storing register value to RAM location : STR 0xff0000, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
@@ -304,7 +301,7 @@ if __name__ == "__main__":
     pprint(f"Microcode generation complete. Opcodes:\n{instructions}")
     
     try:
-        SaveRom.save_file("machinecode/machinecode.rom", final_rom_data, 24)
+        SaveRom.save_file("machinecode/machinecode.rom", final_rom_data, 32)
         print("ROM data saved successfully.")
     except Exception as e:
         print(f"Failed to save ROM file: {e}")
