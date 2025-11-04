@@ -10,28 +10,40 @@ def GenerateSourceRegister(pRegister: int) -> int:
     return (pRegister & 0x1F) << 8
 
 def GenerateDestinationRegister(pRegister: int) -> int:
-    return (pRegister & 0x1F) << 13
+    return (pRegister & 0x1F) << 12
+
+def GenerateALUAInput(pRegister: int) -> int:
+    return (pRegister & 0xF) << 16
+
+def GenerateALUBInput(pRegister: int) -> int:
+    print((pRegister & 0xF) << 20)
+    return (pRegister & 0xF) << 20
+
 
 
 INSTRUCTION_SET = {
     'NOP': 0x00, 
     'HALT': 0x01,
     'MOV': 0x02, 
-    'LDI': [0x03, 0x04, 0x18], 
-    'STR': [0x05, 0x06],
-    'ADD': 0x07,
-    'SUB': 0x08,
-    'MUL': 0x09,
-    'DIV': 0x0A, 
-    'SHL': 0x0B,
-    'AND': 0x0C,
-    'OR': 0x0D,
-    'XOR': 0x0E,
-    'JP': [0x0F, 0x10],
-    'JPZ': [0x11, 0x12],
-    'JPC': [0x13, 0x14],
-    'CALL': [0x15, 0x16],
-    'RTS': 0x17
+    'LDI': [0x03, 0x04, 0x05], 
+    'STR': [0x06, 0x07],
+    'ADD': 0x08,
+    'SUB': 0x09,
+    'MUL': 0x0A,
+    'DIV': 0x0B, 
+    'SHL': 0x0C,
+    'SHR': 0x0D,
+    'NAND': 0x0E,
+    'AND': 0x0F,
+    'OR': 0x10,
+    'XOR': 0x11,
+    'NOR': 0x12,
+    'NOT': 0x13,
+    'JP': [0x14, 0x15],
+    'JPZ': [0x16, 0x17, 0x18, 0x19],
+    'JPC': [0x1A, 0x1B, 0x1C, 0x1D],
+    'CALL': [0x1E, 0x1F],
+    'RTS': 0x20
 }
 
 
@@ -64,20 +76,16 @@ class RelocatableObject:
 
 
 class Assembler:
-    def __init__(self, pInstructionSet, pRegisters, pPortRegisters, pSourceDir='.'):
+    def __init__(self, pInstructionSet, pRegisters, pSourceDir='.'):
         self.InstructionSet = pInstructionSet
         self.Registers = pRegisters
-        self.PortRegisters = pPortRegisters
         self.SourceDir = pSourceDir
         
     def ParseRegister(self, pToken: str) -> int:
         return getattr(self.Registers, pToken.upper())
         
-    def ParsePortRegister(self, pToken: str) -> int:
-        return getattr(self.PortRegisters, pToken.upper())
-    
     def IsRegister(self, pToken: str) -> bool:
-        return hasattr(self.Registers, pToken.upper()) or hasattr(self.PortRegisters, pToken.upper())
+        return hasattr(self.Registers, pToken.upper())
 
     def ParseOperand(self, pOperand: str):
         pOperand = pOperand.strip()
@@ -97,8 +105,6 @@ class Assembler:
             except ValueError: raise ValueError(f"Invalid direct address: {pOperand}")
         elif hasattr(self.Registers, pOperand.upper()):
             return 'register', self.ParseRegister(pOperand)
-        elif hasattr(self.PortRegisters, pOperand.upper()):
-            return 'register', self.ParsePortRegister(pOperand)
         elif re.match(r'^[A-Z_][A-Z0-9_.]*$', pOperand.upper()):
             return 'symbol', pOperand.upper()
         else:
@@ -214,21 +220,77 @@ class Assembler:
             bytecode_word = opcode | GenerateSourceRegister(srcVal) | GenerateDestinationRegister(destVal)
         
         # ALU Operations
-        elif mnemonic in ['ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'AND', 'OR', 'XOR']:
-            destType, destVal = self.ParseOperand(operands[0] if len(operands) > 0 else 'REA')
-            srcType, srcVal = self.ParseOperand(operands[1] if len(operands) > 1 else 'REB')
-            
-            if destType != 'register' or srcType != 'register':
-                raise SyntaxError(f"{mnemonic} requires register operands")
-            
+        elif mnemonic in ['ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'SHR', 'NAND', 'AND', 'OR', 'XOR', 'NOR']:
             opcode = self.InstructionSet[mnemonic]
-            bytecode_word = opcode | GenerateSourceRegister(srcVal) | GenerateDestinationRegister(destVal)
+            
+            if len(operands) == 2:
+                # 2-operand format: ADD REA, REX (add REX to REA, store in REA)
+                destType, destVal = self.ParseOperand(operands[0])
+                srcType, srcVal = self.ParseOperand(operands[1])
+                
+                if destType != 'register' or srcType != 'register':
+                    raise SyntaxError(f"{mnemonic} requires register operands")
+                
+                # A-input = dest register, B-input = src register, destination = dest register
+                bytecode_word = (opcode | 
+                               GenerateALUAInput(srcVal) | 
+                               GenerateALUBInput(destVal) | 
+                               GenerateDestinationRegister(destVal))
+                
+            elif len(operands) == 3:
+                # 3-operand format: ADD REX, REY, REZ (add REY to REX, store in REZ)
+                aInputType, aInputVal = self.ParseOperand(operands[0])
+                bInputType, bInputVal = self.ParseOperand(operands[1])
+                destType, destVal = self.ParseOperand(operands[2])
+                
+                if aInputType != 'register' or bInputType != 'register' or destType != 'register':
+                    raise SyntaxError(f"{mnemonic} requires register operands")
+                
+                # A-input = first operand, B-input = second operand, destination = third operand
+                bytecode_word = (opcode | 
+                               GenerateALUAInput(aInputVal) | 
+                               GenerateALUBInput(bInputVal) | 
+                               GenerateDestinationRegister(destVal))
+            else:
+                raise SyntaxError(f"{mnemonic} requires either 2 or 3 operands, got {len(operands)}")
+        
+        # NOT operation (unary)
+        elif mnemonic == 'NOT':
+            opcode = self.InstructionSet[mnemonic]
+            
+            if len(operands) == 1:
+                # 1-operand format: NOT REA (NOT REA, store in REA)
+                destType, destVal = self.ParseOperand(operands[0])
+                
+                if destType != 'register':
+                    raise SyntaxError(f"{mnemonic} requires register operand")
+                
+                # A-input = dest register, B-input = 0 (unused), destination = dest register
+                bytecode_word = (opcode | 
+                               GenerateALUAInput(destVal) | 
+                               GenerateALUBInput(0) | 
+                               GenerateDestinationRegister(destVal))
+                
+            elif len(operands) == 2:
+                # 2-operand format: NOT REA, REB (NOT REA, store in REB)
+                srcType, srcVal = self.ParseOperand(operands[0])
+                destType, destVal = self.ParseOperand(operands[1])
+                
+                if srcType != 'register' or destType != 'register':
+                    raise SyntaxError(f"{mnemonic} requires register operands")
+                
+                # A-input = src register, B-input = 0 (unused), destination = dest register
+                bytecode_word = (opcode | 
+                               GenerateALUAInput(srcVal) | 
+                               GenerateALUBInput(0) | 
+                               GenerateDestinationRegister(destVal))
+            else:
+                raise SyntaxError(f"{mnemonic} requires either 1 or 2 operands, got {len(operands)}")
         
         # LDI
         elif mnemonic == 'LDI':
             destType, destVal = self.ParseOperand(operands[0])
             srcType, srcVal = self.ParseOperand(operands[1])
-            
             if srcType == 'immediate':
                 opcode = self.InstructionSet['LDI'][0]
                 bytecode_word = opcode | GenerateDestinationRegister(destVal)
@@ -283,7 +345,7 @@ class Assembler:
 
 
 def main(input_file, output_file):
-    assembler = Assembler(INSTRUCTION_SET, Register, ExpansionPortRegister)
+    assembler = Assembler(INSTRUCTION_SET, Register)
     
     try:
         with open(input_file, 'r') as f:

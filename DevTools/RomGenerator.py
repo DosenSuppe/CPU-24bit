@@ -15,18 +15,15 @@ def generateInstruction(pInstruction: list[int] = []):
     return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END]
 
 # shared across multiple jump instructions:
-"""
-
 JUMP_INSTRUCTION = generateInstruction([
-    MI.LOAD_PC_AS_RAM_ADDRESS,
-    GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
+    PC_ADDRESS_OUT | MAR_WRITE,
+    PC_ADDRESS_OUT | PC_WRITE | RAM_READ
 ])
 
 JUMP_ADDR_INSTRUCTION = generateInstruction([
-    ENABLE_SOURCE_REGISTER | REGISTER_LOAD
+    GPR_DATA_OUT | PC_WRITE | PC_ADDRESS_OUT | MAR_WRITE,
 ])
 
-"""
 
 
 instruction_set = [
@@ -45,14 +42,14 @@ instruction_set = [
     {
         'name': 'mov', 'op_code': 0x02, # moving between registers
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GPR_DATA_OUT | GPR_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GPR_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'ldi', 'op_code': 0x03, # loading immediate to register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             PC_ADDRESS_OUT | MAR_WRITE,
-            RAM_READ | GPR_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+            RAM_READ | GPR_B_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
         ])
     },
     {
@@ -61,7 +58,7 @@ instruction_set = [
         'steps': generateInstruction([
             PC_ADDRESS_OUT | MAR_WRITE,
             PC_ADDRESS_OUT | RAM_READ | MAR_WRITE | MAR_SOURCE_SELECT,
-            PC_ADDRESS_OUT | RAM_READ | GPR_WRITE | PC_INCREMENT
+            PC_ADDRESS_OUT | RAM_READ | GPR_B_WRITE | PC_INCREMENT
         ])
     },
     {
@@ -69,7 +66,7 @@ instruction_set = [
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             GPR_ADDRESS_OUT | MAR_WRITE,
-            PC_ADDRESS_OUT | RAM_READ | GPR_WRITE
+            PC_ADDRESS_OUT | RAM_READ | GPR_B_WRITE
         ])
     },
     {
@@ -150,100 +147,90 @@ instruction_set = [
         'name': 'not', 'op_code': 0x13,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([GenerateALUOperation(ALU.NOT) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
-    }
-]
-
-"""
-    
+    },
     
     # control flow instructions
     { 
-        'name': 'jp', 'op_code': 0x0F, # jump to address: JP 0xff0000 or JP Label
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'jp', 'op_code': 0x14, # jump to address: JP 0xff0000 or JP Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_INSTRUCTION
     },
     {
-        'name': 'jp_addr', 'op_code': 0x10, # jump to address in register: JP REA
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        
-        # same as MOV, (might as well remove this later and use the compiler to generate the MOV instruction)
+        'name': 'jp_addr', 'op_code': 0x15, # jump to address in register: JP REA
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jpz', 'op_code': 0x11, # jump if zero flag is set
-        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'jpz', 'op_code': 0x16, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_INSTRUCTION
     },
     {
-        'name': 'jpz_false', 'op_code': 0x11, # jump if zero flag is set
-        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([ENABLE_PC])
+        'name': 'jpz_false', 'op_code': 0x17, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
     },
-    
     {
-        'name': 'jpz_addr', 'op_code': 0x12, # jump if zero flag is set
-        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'jpz_addr', 'op_code': 0x18, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jpz_addr_false', 'op_code': 0x12, # jump if zero flag is set
-        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([ENABLE_PC])
+        'name': 'jpz_addr_false', 'op_code': 0x19, # jump if zero flag is set
+        'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
     },
-    
     {
-        'name': 'jpc', 'op_code': 0x13, # jump if carry flag is set
-        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'jpc', 'op_code': 0x1A, # jump if carry flag is set
+        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_INSTRUCTION
     },
     {
-        'name': 'jpc_false', 'op_code': 0x13, # jump if carry flag is set
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([ENABLE_PC])
+        'name': 'jpc_false', 'op_code': 0x1B, # jump if carry flag is set
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
     },
     {
-        'name': 'jpc_addr', 'op_code': 0x14, # jump if zero flag is set
-        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'name': 'jpc_addr', 'op_code': 0x1C, # jump if carry flag is set
+        'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jpc_addr_false', 'op_code': 0x14, # jump if zero flag is set
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
-        'steps': generateInstruction([ENABLE_PC])
+        'name': 'jpc_addr_false', 'op_code': 0x1D, # jump if carry flag is set
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
     },
     
     {
-        'name': 'call', 'op_code': 0x15, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'name': 'call', 'op_code': 0x1E, # call subroutine at address: CALL 0xff0000 or CALL Label
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
-            MI.LOAD_PC_AS_RAM_ADDRESS,
-            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
-            RAM_WRITE | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.PC) | ENABLE_SP,
-            MI.LOAD_PC_AS_RAM_ADDRESS,
-            GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE | MI.READ_RAM
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
         ])
     },
     {
-        'name': 'call_addr', 'op_code': 0x16, # call subroutine at indirect address: CALL REA or CALL REX
+        'name': 'call_addr', 'op_code': 0x1F, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
-            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
-            RAM_WRITE | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.PC) | ENABLE_SP,
-            ENABLE_SOURCE_REGISTER | REGISTER_LOAD
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
         ])
     },
-    
     {
-        'name': 'rts', 'op_code': 0x17,
+        'name': 'rts', 'op_code': 0x20,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
         'steps': generateInstruction([
-            DECREMENT_SP | ENABLE_SP,
-            RAM_ADDRESS_LOAD | ENABLE_SOURCE_REGISTER | GenerateRegister(Register.SP),
-            MI.READ_RAM | GenerateRegister(Register.PC) | SET_AS_DESTINATION_ADDRESS | REGISTER_STORE,
-            ENABLE_PC,
-            MI.LOAD_PC_AS_RAM_ADDRESS
+            SP_INCREMENT,
+            SP_ADDRESS_OUT | MAR_WRITE,
+            SP_ADDRESS_OUT | RAM_READ | PC_WRITE,
+            PC_ADDRESS_OUT | MAR_WRITE
         ])
-    }"""
+    }
+]
 
 def cast_array(value):
     return value if isinstance(value, list) else [value]
