@@ -203,7 +203,7 @@ instruction_set = [
     
     {
         'name': 'call', 'op_code': 0x1E, # call subroutine at address: CALL 0xff0000 or CALL Label
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
             RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
@@ -213,7 +213,7 @@ instruction_set = [
     },
     {
         'name': 'call_addr', 'op_code': 0x1F, # call subroutine at indirect address: CALL REA or CALL REX
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
             RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
@@ -222,14 +222,66 @@ instruction_set = [
     },
     {
         'name': 'rts', 'op_code': 0x20,
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1]},
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_INCREMENT,
             SP_ADDRESS_OUT | MAR_WRITE,
             SP_ADDRESS_OUT | RAM_READ | PC_WRITE,
             PC_ADDRESS_OUT | MAR_WRITE
         ])
-    }
+    },
+
+    {
+        'name': 'push', 'op_code': 0x21, # pushes value from a register onto the stack
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            GPR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            PC_ADDRESS_OUT | MAR_WRITE
+         ])
+    },
+    {
+        'name': 'push_addr', 'op_code': 0x22, # pushes value from a register onto the stack
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            GPR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            PC_ADDRESS_OUT | MAR_WRITE
+         ])
+    },
+    {
+        'name': 'pop', 'op_code': 0x23, # pushes value from a register onto the stack
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_INCREMENT,
+            SP_ADDRESS_OUT | MAR_WRITE,
+            GPR_B_WRITE | RAM_READ | SP_ADDRESS_OUT,
+            PC_ADDRESS_OUT | MAR_WRITE
+         ])
+    },
+
+    {
+        'name': 'setsp', 'op_code': 0x24, # sets the stack pointer
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            PC_ADDRESS_OUT | MAR_WRITE,
+            SP_WRITE | RAM_READ | PC_ADDRESS_OUT | PC_INCREMENT
+         ])
+    },
+    {
+        'name': 'getsp', 'op_code': 0x25, # gets the stack pointer
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
+        ])
+    },
+    {
+        'name': 'getpc', 'op_code': 0x26, # gets the program counter
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            PC_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
+        ])
+    },
 ]
 
 def cast_array(value):
@@ -242,7 +294,7 @@ def create_instruction_microcode(instruction):
     zf_states = instruction['flags'].get('z', [0, 1])
     ltf_states = instruction['flags'].get('l', [0, 1])
     gtf_states = instruction['flags'].get('g', [0, 1])
-    etf_states = instruction['flags'].get('e', [0, 1]) # TODO: implement 'e' flag handling
+    etf_states = instruction['flags'].get('e', [0, 1])
 
     for cf in cf_states:
         for zf in zf_states:

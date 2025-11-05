@@ -43,7 +43,12 @@ INSTRUCTION_SET = {
     'JPZ': [0x16, 0x17, 0x18, 0x19],
     'JPC': [0x1A, 0x1B, 0x1C, 0x1D],
     'CALL': [0x1E, 0x1F],
-    'RTS': 0x20
+    'RTS': 0x20,
+    'PUSH': [0x21, 0x22],
+    'POP': 0x23,
+    'SETSP': 0x24,
+    'GETSP': 0x25,
+    'GETPC': 0x26
 }
 
 
@@ -340,6 +345,61 @@ class Assembler:
             elif opType == 'register':
                 opcode = self.InstructionSet[mnemonic][1]
                 bytecode_word = opcode | GenerateSourceRegister(opVal)
+        
+        # PUSH
+        elif mnemonic == 'PUSH':
+            srcType, srcVal = self.ParseOperand(operands[0])
+            
+            if srcType == 'register':
+                opcode = self.InstructionSet['PUSH'][0]
+                bytecode_word = opcode | GenerateSourceRegister(srcVal)
+            elif srcType == 'immediate':
+                opcode = self.InstructionSet['PUSH'][1]
+                bytecode_word = opcode
+                extra_word = srcVal
+            else:
+                raise SyntaxError(f"PUSH operand must be a register or immediate value")
+        
+        # POP
+        elif mnemonic == 'POP':
+            destType, destVal = self.ParseOperand(operands[0])
+            
+            if destType == 'register':
+                opcode = self.InstructionSet['POP']
+                bytecode_word = opcode | GenerateDestinationRegister(destVal)
+            else:
+                raise SyntaxError(f"POP operand must be a register")
+        
+        # SETSP
+        elif mnemonic == 'SETSP':
+            srcType, srcVal = self.ParseOperand(operands[0])
+            
+            if srcType == 'immediate':
+                opcode = self.InstructionSet['SETSP']
+                bytecode_word = opcode
+                extra_word = srcVal
+            else:
+                raise SyntaxError(f"SETSP operand must be an immediate value")
+        
+        # GETSP
+        elif mnemonic == 'GETSP':
+            destType, destVal = self.ParseOperand(operands[0])
+            
+            if destType == 'register':
+                opcode = self.InstructionSet['GETSP']
+                bytecode_word = opcode | GenerateDestinationRegister(destVal)
+            else:
+                raise SyntaxError(f"GETSP operand must be a register")
+        
+        # GETPC
+        elif mnemonic == 'GETPC':
+            destType, destVal = self.ParseOperand(operands[0])
+            
+            if destType == 'register':
+                opcode = self.InstructionSet['GETPC']
+                bytecode_word = opcode | GenerateDestinationRegister(destVal)
+            else:
+                raise SyntaxError(f"GETPC operand must be a register")
         
         return bytecode_word, extra_word, relocation
 

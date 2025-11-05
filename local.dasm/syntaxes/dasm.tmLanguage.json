@@ -37,7 +37,7 @@
         "keywords": {
             "patterns": [{
                 "name": "keyword.control.dasm",
-                "match": "\\b(NOP|HALT|MOV|LDI|STR|ADD|SUB|MUL|DIV|SHL|AND|OR|XOR|JP|JPC|JPZ|CALL|RTS)\\b"
+                "match": "\\b(NOP|HALT|MOV|LDI|STR|ADD|SUB|MUL|DIV|SHL|SHR|NOT|AND|NAND|OR|XOR|JP|JPC|JPZ|CALL|RTS|PUSH|POP|GETSP|SETSP|GETPC)\\b"
             }]
         },
         "sections": {
@@ -46,7 +46,7 @@
         },
         "registers": {
             "name": "variable.parameter.register.dasm",
-            "match": "\\b(REP|REQ|RER|RES|RET|REU|REV|REW|REX|REY|REZ|REA|REB|SP|PC|ACC|EP[0-9]|EPA|EPB|EPC|EPD|EPE|EPF)\\b"
+            "match": "\\b(REN|REO|REP|REQ|RER|RES|RET|REU|REV|REW|REX|REY|REZ|REA|REB|REC)\\b"
         },
         "labels": {
             "name": "entity.name.function.label.dasm",

@@ -1,4 +1,7 @@
 
-.Code ; GPIO range
-    STR 0xe00000, 1
-    STR 0xe00001, 1
+.Code
+SETSP #0x20 ; initialize stack pointer
+GETSP REB   ; save SP to REB
+GETPC REC   ; get the value of this very instruction
+
+HALT
