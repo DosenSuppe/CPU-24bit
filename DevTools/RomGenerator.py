@@ -12,7 +12,7 @@ from Values.OperationsALU import ALU
 FETCH = [MAR_WRITE | PC_ADDRESS_OUT,  PC_ADDRESS_OUT | RAM_READ | INSTRUCTION_LOAD | PC_INCREMENT]
 
 def generateInstruction(pInstruction: list[int] = []):
-    return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END]
+    return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END | INTERRUPT_CHECK]
 
 # shared across multiple jump instructions:
 JUMP_INSTRUCTION = generateInstruction([
@@ -82,8 +82,8 @@ instruction_set = [
         'name': 'str_addr', 'op_code': 0x07, # storing value to RAM location from RAM address in register : STR REB, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            GPR_ADDRESS_OUT | MAR_WRITE,                # load address from A-Register
-            PC_ADDRESS_OUT | GPR_B_DATA_OUT | RAM_WRITE # load value to write from B-Register
+            GPR_B_ADDRESS_OUT | MAR_WRITE,            # load address from B-Register
+            PC_ADDRESS_OUT | GPR_DATA_OUT | RAM_WRITE # load value to write from A-Register
         ])
     },
     
@@ -282,6 +282,13 @@ instruction_set = [
             PC_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
         ])
     },
+    {
+        'name': 'int', 'op_code': 0xff, # trigger an interrupt
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            INTERRUPT_REQUEST_ACKNOWLEDGE
+        ])
+    }
 ]
 
 def cast_array(value):
@@ -304,7 +311,7 @@ def create_instruction_microcode(instruction):
                         flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (gtf << 1) | etf
 
                         for step_index, control_word in enumerate(instruction['steps']):
-                            address = (flag_value << 19) | (instruction['op_code'] << 4) | step_index
+                            address = (flag_value << 19) | (instruction['op_code'] << 5) | step_index
                             
                             microcode_steps.append({
                                 'name': instruction['name'],
@@ -335,7 +342,7 @@ def generate_microcode(instruction_set):
 
 def fill_microcode_addresses(microcode):
     
-    MAX_ROM_ADDRESS = (0x1F << 19) | (0xFF << 4) | 0xF
+    MAX_ROM_ADDRESS = (0x1F << 19) | (0xFF << 5) | 0x1F
     print(f"MAX_ROM_ADDRESS: {MAX_ROM_ADDRESS} (0x{MAX_ROM_ADDRESS:06X})")
     
     final_output = [0] * (MAX_ROM_ADDRESS + 1)
