@@ -308,7 +308,7 @@ instruction_set = [
             SP_ADDRESS_OUT | MAR_WRITE,
             FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
             
-            PC_ADDRESS_OUT | MAR_WRITE
+            IVR_ADDRESS_OUT | MAR_WRITE
         ])
     },
     {
@@ -321,7 +321,7 @@ instruction_set = [
             SP_ADDRESS_OUT | MAR_WRITE,
             FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
             
-            PC_ADDRESS_OUT | MAR_WRITE,
+            IVR_ADDRESS_OUT | MAR_WRITE,
             INSTRUCTION_END
         ]
     }
