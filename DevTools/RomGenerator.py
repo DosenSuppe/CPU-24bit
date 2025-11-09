@@ -91,62 +91,62 @@ instruction_set = [
     {
         'name': 'add', 'op_code': 0x08, # adding values with registers only (e.g. ADD REA, REB or ADD REA, REB, REZ)
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.ADD) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.ADD) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'sub', 'op_code': 0x09,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.SUB) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.SUB) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'mul', 'op_code': 0x0A,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.MUL) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.MUL) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'div', 'op_code': 0x0B,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.DIV) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.DIV) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'shl', 'op_code': 0x0C, # shift bits to left
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.SHL) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.SHL) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'shr', 'op_code': 0x0D,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.SHR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.SHR) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'nand', 'op_code': 0x0E,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.NAND) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.NAND) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'and', 'op_code': 0x0F,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.AND) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.AND) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'or', 'op_code': 0x10,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.OR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.OR) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'xor', 'op_code': 0x11,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.XOR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.XOR) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'nor', 'op_code': 0x12,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.NOR) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.NOR) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     {
         'name': 'not', 'op_code': 0x13,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.NOT) | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
+        'steps': generateInstruction([GenerateALUOperation(ALU.NOT) | FR_WRITE | ALU_OUT | GPR_B_WRITE | PC_ADDRESS_OUT])
     },
     
     # control flow instructions
@@ -282,12 +282,48 @@ instruction_set = [
             PC_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
         ])
     },
+    
+    {
+        'name': 'rti', 'op_code': 0xfd, # return from interrupt
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            SP_ADDRESS_OUT | MAR_WRITE,
+            FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            PC_ADDRESS_OUT | MAR_WRITE,
+            
+            INTERRUPT_REQUEST_ACKNOWLEDGE
+        ])
+    },
+    {
+        'name': 'int_trigger', 'op_code': 0xfe, # trigger an interrupt through software
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            SP_ADDRESS_OUT | MAR_WRITE,
+            FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            PC_ADDRESS_OUT | MAR_WRITE
+        ])
+    },
     {
         'name': 'int', 'op_code': 0xff, # trigger an interrupt
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([
-            INTERRUPT_REQUEST_ACKNOWLEDGE
-        ])
+        'steps': [
+            SP_ADDRESS_OUT | MAR_WRITE,
+            PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            SP_ADDRESS_OUT | MAR_WRITE,
+            FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
+            
+            PC_ADDRESS_OUT | MAR_WRITE,
+            INSTRUCTION_END
+        ]
     }
 ]
 

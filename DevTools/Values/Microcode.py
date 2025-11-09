@@ -38,6 +38,10 @@ BUS_GRANT = 1 << 30
 
 HALT = 1 << 31
 
+FR_DATA_OUT = 1 << 37
+FR_WRITE = 1 << 38
+FR_WRITE_FROM_RAM = 1 << 39
+
 def GenerateALUOperation(pOperation: int) -> int:
     return (pOperation & 0xF) << 11
 
