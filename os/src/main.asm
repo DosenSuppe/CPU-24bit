@@ -5,12 +5,26 @@ SET_SP  #0xDFFFFF   ; Set Stack Pointer
 JP InitKernel
 
 .InterruptHandler
-ADD REC, REB
+PUSH REB
+
+LDI REB, #0x1
+SUB REA, REB, REX
+
+JPZ Print_CALL
+
+InterruptHandled:
+POP REB
 RTI
 
 .Kernel
 InitKernel:
-    
 
+
+INT_Print_CALL:
+    CALL Print
+    JP InterruptHandled
+
+Print:
+    RTS
 
 HALT
