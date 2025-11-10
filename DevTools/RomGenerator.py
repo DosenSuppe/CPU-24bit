@@ -166,43 +166,43 @@ instruction_set = [
         'steps': JUMP_INSTRUCTION
     },
     {
-        'name': 'jpz_false', 'op_code': 0x17, # jump if zero flag is set
+        'name': 'jpz_false', 'op_code': 0x16, # jump if zero flag is set
         'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     {
-        'name': 'jpz_addr', 'op_code': 0x18, # jump if zero flag is set
+        'name': 'jpz_addr', 'op_code': 0x17, # jump if zero flag is set
         'flags': {'c': [0, 1], 'z': [1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jpz_addr_false', 'op_code': 0x19, # jump if zero flag is set
+        'name': 'jpz_addr_false', 'op_code': 0x17, # jump if zero flag is set
         'flags': {'c': [0, 1], 'z': [0], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     {
-        'name': 'jpc', 'op_code': 0x1A, # jump if carry flag is set
+        'name': 'jpc', 'op_code': 0x18, # jump if carry flag is set
         'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_INSTRUCTION
     },
     {
-        'name': 'jpc_false', 'op_code': 0x1B, # jump if carry flag is set
+        'name': 'jpc_false', 'op_code': 0x18, # jump if carry flag is set
         'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     {
-        'name': 'jpc_addr', 'op_code': 0x1C, # jump if carry flag is set
+        'name': 'jpc_addr', 'op_code': 0x19, # jump if carry flag is set
         'flags': {'c': [1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jpc_addr_false', 'op_code': 0x1D, # jump if carry flag is set
+        'name': 'jpc_addr_false', 'op_code': 0x19, # jump if carry flag is set
         'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     
     {
-        'name': 'call', 'op_code': 0x1E, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'name': 'call', 'op_code': 0x1A, # call subroutine at address: CALL 0xff0000 or CALL Label
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
@@ -212,7 +212,7 @@ instruction_set = [
         ])
     },
     {
-        'name': 'call_addr', 'op_code': 0x1F, # call subroutine at indirect address: CALL REA or CALL REX
+        'name': 'call_addr', 'op_code': 0x1B, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
@@ -221,7 +221,7 @@ instruction_set = [
         ])
     },
     {
-        'name': 'rts', 'op_code': 0x20,
+        'name': 'rts', 'op_code': 0x1C,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_INCREMENT,
@@ -232,7 +232,7 @@ instruction_set = [
     },
 
     {
-        'name': 'push', 'op_code': 0x21, # pushes value from a register onto the stack
+        'name': 'push', 'op_code': 0x1D, # pushes value from a register onto the stack
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
@@ -241,7 +241,7 @@ instruction_set = [
          ])
     },
     {
-        'name': 'push_addr', 'op_code': 0x22, # pushes value from a register onto the stack
+        'name': 'push_addr', 'op_code': 0x1E, # pushes value from a register onto the stack
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
@@ -250,7 +250,7 @@ instruction_set = [
          ])
     },
     {
-        'name': 'pop', 'op_code': 0x23, # pushes value from a register onto the stack
+        'name': 'pop', 'op_code': 0x1F, # pops value from the stack into a register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_INCREMENT,
@@ -261,7 +261,7 @@ instruction_set = [
     },
 
     {
-        'name': 'setsp', 'op_code': 0x24, # sets the stack pointer
+        'name': 'setsp', 'op_code': 0x20, # sets the stack pointer
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             PC_ADDRESS_OUT | MAR_WRITE,
@@ -269,37 +269,47 @@ instruction_set = [
          ])
     },
     {
-        'name': 'getsp', 'op_code': 0x25, # gets the stack pointer
+        'name': 'getsp', 'op_code': 0x21, # gets the stack pointer
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
         ])
     },
     {
-        'name': 'getpc', 'op_code': 0x26, # gets the program counter
+        'name': 'getpc', 'op_code': 0x22, # gets the program counter
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             PC_DATA_OUT | GPR_B_WRITE | PC_ADDRESS_OUT
         ])
     },
-    
     {
-        'name': 'rti', 'op_code': 0xfd, # return from interrupt
+        'name': 'setivr', 'op_code': 0x23, # sets the interrupt vector register
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            SP_ADDRESS_OUT | MAR_WRITE,
-            PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            
-            SP_ADDRESS_OUT | MAR_WRITE,
-            FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            
             PC_ADDRESS_OUT | MAR_WRITE,
+            PC_ADDRESS_OUT | RAM_READ | IVR_WRITE | PC_INCREMENT
+        ])
+    },
+    
+    # interrupt instructions
+    {
+        'name': 'rti', 'op_code': 0xfe, # return from interrupt
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_INCREMENT,
+            SP_ADDRESS_OUT | MAR_WRITE,
+            
+            FR_WRITE_FROM_RAM | FR_WRITE | RAM_READ | SP_ADDRESS_OUT,
+            SP_INCREMENT,
+            
+            SP_ADDRESS_OUT | MAR_WRITE,
+            PC_WRITE | RAM_READ | SP_ADDRESS_OUT,
             
             INTERRUPT_REQUEST_ACKNOWLEDGE
         ])
     },
     {
-        'name': 'int_trigger', 'op_code': 0xfe, # trigger an interrupt through software
+        'name': 'int_trigger', 'op_code': 0xff, # trigger an interrupt
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
@@ -308,22 +318,8 @@ instruction_set = [
             SP_ADDRESS_OUT | MAR_WRITE,
             FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
             
-            IVR_ADDRESS_OUT | MAR_WRITE
+            PC_WRITE | IVR_OUT | PC_ADDRESS_OUT
         ])
-    },
-    {
-        'name': 'int', 'op_code': 0xff, # trigger an interrupt
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': [
-            SP_ADDRESS_OUT | MAR_WRITE,
-            PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            
-            SP_ADDRESS_OUT | MAR_WRITE,
-            FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            
-            IVR_ADDRESS_OUT | MAR_WRITE,
-            INSTRUCTION_END
-        ]
     }
 ]
 

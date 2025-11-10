@@ -40,15 +40,19 @@ INSTRUCTION_SET = {
     'NOR': 0x12,
     'NOT': 0x13,
     'JP': [0x14, 0x15],
-    'JPZ': [0x16, 0x17, 0x18, 0x19],
-    'JPC': [0x1A, 0x1B, 0x1C, 0x1D],
-    'CALL': [0x1E, 0x1F],
-    'RTS': 0x20,
-    'PUSH': [0x21, 0x22],
-    'POP': 0x23,
-    'SETSP': 0x24,
-    'GETSP': 0x25,
-    'GETPC': 0x26
+    'JPZ': [0x16, 0x17],
+    'JPC': [0x18, 0x19],
+    'CALL': [0x1A, 0x1B],
+    'RTS': 0x1C,
+    'PUSH': [0x1D, 0x1E],
+    'POP': 0x1F,
+    'SET_SP': 0x20,
+    'GET_SP': 0x21,
+    'GET_PC': 0x22,
+    'SET_IVR': 0x23,
+
+    'RTI': 0xFE,
+    'INT': 0xFF
 }
 
 
@@ -214,7 +218,7 @@ class Assembler:
         relocation = None
         
         # NOP, HALT, RTS
-        if mnemonic in ['NOP', 'HALT', 'RTS']:
+        if mnemonic in ['NOP', 'HALT', 'RTS', 'RTI', 'INT']:
             bytecode_word = self.InstructionSet[mnemonic]
         
         # MOV
@@ -370,36 +374,47 @@ class Assembler:
             else:
                 raise SyntaxError(f"POP operand must be a register")
         
-        # SETSP
-        elif mnemonic == 'SETSP':
+        # SET_SET_SPSP
+        elif mnemonic == 'SET_SP':
             srcType, srcVal = self.ParseOperand(operands[0])
             
             if srcType == 'immediate':
-                opcode = self.InstructionSet['SETSP']
+                opcode = self.InstructionSet['SET_SP']
                 bytecode_word = opcode
                 extra_word = srcVal
             else:
-                raise SyntaxError(f"SETSP operand must be an immediate value")
+                raise SyntaxError(f"SET_SP operand must be an immediate value")
         
-        # GETSP
-        elif mnemonic == 'GETSP':
+        # GET_SP
+        elif mnemonic == 'GET_SP':
             destType, destVal = self.ParseOperand(operands[0])
             
             if destType == 'register':
-                opcode = self.InstructionSet['GETSP']
+                opcode = self.InstructionSet['GET_SP']
                 bytecode_word = opcode | GenerateDestinationRegister(destVal)
             else:
-                raise SyntaxError(f"GETSP operand must be a register")
+                raise SyntaxError(f"GET_SP operand must be a register")
         
-        # GETPC
-        elif mnemonic == 'GETPC':
+        # GET_PC
+        elif mnemonic == 'GET_PC':
             destType, destVal = self.ParseOperand(operands[0])
             
             if destType == 'register':
-                opcode = self.InstructionSet['GETPC']
+                opcode = self.InstructionSet['GET_PC']
                 bytecode_word = opcode | GenerateDestinationRegister(destVal)
             else:
-                raise SyntaxError(f"GETPC operand must be a register")
+                raise SyntaxError(f"GET_PC operand must be a register")
+            
+        # SET_IVR
+        elif mnemonic == 'SET_IVR':
+            srcType, srcVal = self.ParseOperand(operands[0])
+            
+            if srcType == 'immediate':
+                opcode = self.InstructionSet['SET_IVR']
+                bytecode_word = opcode
+                extra_word = srcVal
+            else:
+                raise SyntaxError(f"SET_IVR operand must be an immediate value")
         
         return bytecode_word, extra_word, relocation
 

@@ -37,7 +37,7 @@
         "keywords": {
             "patterns": [{
                 "name": "keyword.control.dasm",
-                "match": "\\b(NOP|HALT|MOV|LDI|STR|ADD|SUB|MUL|DIV|SHL|SHR|NOT|AND|NAND|OR|XOR|JP|JPC|JPZ|CALL|RTS|PUSH|POP|GETSP|SETSP|GETPC)\\b"
+                "match": "\\b(NOP|HALT|MOV|LDI|STR|ADD|SUB|MUL|DIV|SHL|SHR|NOT|AND|NAND|OR|XOR|JP|JPC|JPZ|CALL|RTS|PUSH|POP|GET_SP|SET_SP|GET_PC|SET_IVR|INT|RTI)\\b"
             }]
         },
         "sections": {

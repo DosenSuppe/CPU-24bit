@@ -1,14 +1,21 @@
+.SetUp
+SET_IVR #0x20   ; Start of Reset-Vector
+SET_SP #0x33   ; Set Stack Pointer
+
+JP Main
+
+.InterruptHandler
+LDI REB, #0x123
+RTI
 
 .Code
-LDI REB, #0xE00000
-LDI REA, #0x21
 
-STR [REB], REA   ; Store the value in REA to memory address 0xE00000
+Main:
+    LDI REA, #0x1
 
-NOP 
-NOP
-NOP
+Counter:
+    ADD REA, REA
 
-LDI REB, [#0xE00000] ; Load the value from memory address 0xE00000 into REB
+    JP Counter
 
 HALT
