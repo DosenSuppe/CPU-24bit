@@ -1,4 +1,4 @@
-.JoystickDriver
+.ButtonDriver
 HandleInterrupt:
     PUSH REA
     PUSH REB
@@ -8,7 +8,7 @@ HandleInterrupt:
     LDI REX, #0xE00000
 
     LDI REA, [REX]
-    ADD REA, REB, REA
+    ADD REA, REB
     STR [REX], REA
 
     POP REX

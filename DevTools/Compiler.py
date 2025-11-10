@@ -308,6 +308,17 @@ class Assembler:
                 opcode = self.InstructionSet['LDI'][1]
                 bytecode_word = opcode | GenerateDestinationRegister(destVal)
                 extra_word = srcVal
+            elif srcType == 'symbol':
+                # Create relocation for symbol
+                opcode = self.InstructionSet['LDI'][0]  # Use immediate variant
+                bytecode_word = opcode | GenerateDestinationRegister(destVal)
+                extra_word = 0  # Placeholder
+                relocation = {
+                    'segment': segment,
+                    'offset': offset + 1,  # +1 because extra_word is at next position
+                    'type': 'absolute',
+                    'symbol': srcVal
+                }
             elif srcType == 'register':
                 opcode = self.InstructionSet['LDI'][2]
                 bytecode_word = opcode | GenerateSourceRegister(srcVal) | GenerateDestinationRegister(destVal)    
@@ -321,11 +332,22 @@ class Assembler:
                 opcode = self.InstructionSet['STR'][0]
                 bytecode_word = opcode | GenerateSourceRegister(srcVal)
                 extra_word = destVal
+            elif destType == 'symbol':
+                # Create relocation for symbol
+                opcode = self.InstructionSet['STR'][0]  # Use direct address variant
+                bytecode_word = opcode | GenerateSourceRegister(srcVal)
+                extra_word = 0  # Placeholder
+                relocation = {
+                    'segment': segment,
+                    'offset': offset + 1,  # +1 because extra_word is at next position
+                    'type': 'absolute',
+                    'symbol': destVal
+                }
             elif destType == 'register':
                 opcode = self.InstructionSet['STR'][1]
                 bytecode_word = opcode | GenerateSourceRegister(srcVal) | GenerateDestinationRegister(destVal)
             else:
-                raise SyntaxError(f"STR destination must be a direct address or register: STR <[addr]>, <reg> or STR <reg>, <reg>")
+                raise SyntaxError(f"STR destination must be a direct address, symbol, or register: STR <[addr]>, <reg> or STR <symbol>, <reg> or STR <reg>, <reg>")
         
         # JP, JPZ, JPC, CALL
         elif mnemonic in ['JP', 'JPZ', 'JPC', 'CALL']:
@@ -361,8 +383,19 @@ class Assembler:
                 opcode = self.InstructionSet['PUSH'][1]
                 bytecode_word = opcode
                 extra_word = srcVal
+            elif srcType == 'symbol':
+                # Create relocation for symbol
+                opcode = self.InstructionSet['PUSH'][1]  # Use immediate variant
+                bytecode_word = opcode
+                extra_word = 0  # Placeholder
+                relocation = {
+                    'segment': segment,
+                    'offset': offset + 1,  # +1 because extra_word is at next position
+                    'type': 'absolute',
+                    'symbol': srcVal
+                }
             else:
-                raise SyntaxError(f"PUSH operand must be a register or immediate value")
+                raise SyntaxError(f"PUSH operand must be a register, immediate value, or symbol")
         
         # POP
         elif mnemonic == 'POP':
@@ -374,7 +407,7 @@ class Assembler:
             else:
                 raise SyntaxError(f"POP operand must be a register")
         
-        # SET_SET_SPSP
+        # SET_SP
         elif mnemonic == 'SET_SP':
             srcType, srcVal = self.ParseOperand(operands[0])
             
@@ -382,8 +415,19 @@ class Assembler:
                 opcode = self.InstructionSet['SET_SP']
                 bytecode_word = opcode
                 extra_word = srcVal
+            elif srcType == 'symbol':
+                # Create relocation for symbol
+                opcode = self.InstructionSet['SET_SP']
+                bytecode_word = opcode
+                extra_word = 0  # Placeholder
+                relocation = {
+                    'segment': segment,
+                    'offset': offset + 1,  # +1 because extra_word is at next position
+                    'type': 'absolute',
+                    'symbol': srcVal
+                }
             else:
-                raise SyntaxError(f"SET_SP operand must be an immediate value")
+                raise SyntaxError(f"SET_SP operand must be an immediate value or symbol")
         
         # GET_SP
         elif mnemonic == 'GET_SP':
@@ -413,8 +457,19 @@ class Assembler:
                 opcode = self.InstructionSet['SET_IVR']
                 bytecode_word = opcode
                 extra_word = srcVal
+            elif srcType == 'symbol':
+                # Create relocation for symbol
+                opcode = self.InstructionSet['SET_IVR']
+                bytecode_word = opcode
+                extra_word = 0  # Placeholder
+                relocation = {
+                    'segment': segment,
+                    'offset': offset + 1,  # +1 because extra_word is at next position
+                    'type': 'absolute',
+                    'symbol': srcVal
+                }
             else:
-                raise SyntaxError(f"SET_IVR operand must be an immediate value")
+                raise SyntaxError(f"SET_IVR operand must be an immediate value or symbol")
         
         return bytecode_word, extra_word, relocation
 

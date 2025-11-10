@@ -66,7 +66,7 @@ instruction_set = [
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
             GPR_ADDRESS_OUT | MAR_WRITE,
-            PC_ADDRESS_OUT | RAM_READ | GPR_B_WRITE
+            GPR_ADDRESS_OUT | RAM_READ | GPR_B_WRITE
         ])
     },
     {

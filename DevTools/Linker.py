@@ -8,6 +8,7 @@ class MemoryConfig:
     """Parses and stores memory configuration."""
     def __init__(self, config_file: str):
         self.segments: Dict[str, Tuple[int, int]] = {}
+        self.memory_symbols: Dict[str, int] = {}  # Store memory config symbols
         self._parse_config(config_file)
     
     def _parse_config(self, config_file: str):
@@ -27,6 +28,8 @@ class MemoryConfig:
                     start_addr = int(match.group(2), 0)
                     size = int(match.group(3), 0)
                     self.segments[segment_name] = (start_addr, size)
+                    # Also store as a memory symbol (without the leading dot)
+                    self.memory_symbols[segment_name] = start_addr
                 else:
                     raise SyntaxError(f"Invalid memory config line: {line}")
     
@@ -146,6 +149,10 @@ class Linker:
     def link(self, main_obj_file: str) -> Dict[int, int]:
         print(f"Loading main object file: {main_obj_file}")
         main_obj = self.load_object(main_obj_file)
+        
+        # Register memory configuration symbols as global labels
+        for symbol_name, address in self.mem_config.memory_symbols.items():
+            self.global_labels[symbol_name] = address
         
         # Fixed size for 24-bit addressing (2^24 cells)
         MEMORY_SIZE = 1 << 24
