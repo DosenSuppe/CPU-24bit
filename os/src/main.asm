@@ -1,21 +1,16 @@
 .SetUp
-SET_IVR #0x20   ; Start of Reset-Vector
-SET_SP #0x33   ; Set Stack Pointer
+SET_IVR #0x30       ; Start of Reset-Vector
+SET_SP  #0xDFFFFF   ; Set Stack Pointer
 
-JP Main
+JP InitKernel
 
 .InterruptHandler
-LDI REB, #0x123
+ADD REC, REB
 RTI
 
-.Code
+.Kernel
+InitKernel:
+    
 
-Main:
-    LDI REA, #0x1
-
-Counter:
-    ADD REA, REA
-
-    JP Counter
 
 HALT
