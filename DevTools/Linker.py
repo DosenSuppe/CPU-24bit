@@ -23,7 +23,7 @@ class MemoryConfig:
                 # Parse segment: .SegmentName : Start = 0xADDR, Size = 0xSIZE
                 match = re.match(r'\.(\w+)\s*:\s*Start\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)\s*,\s*Size\s*=\s*(0x[0-9a-fA-F]+|[0-9]+)', line, re.IGNORECASE)
                 if match:
-                    segment_name = match.group(1).upper()
+                    segment_name = match.group(1)  # Preserve original case
                     start_addr = int(match.group(2), 0)
                     size = int(match.group(3), 0)
                     self.segments[segment_name] = (start_addr, size)
@@ -77,7 +77,7 @@ class Linker:
         if (normalized_path in self.loaded_objects):
             return self.loaded_objects[normalized_path]
         
-        with open(obj_file, 'r') as f:
+        with open(normalized_path, 'r') as f:
             data = json.load(f)
         
         obj = RelocatableObject.from_dict(data)
@@ -85,18 +85,47 @@ class Linker:
         # Determine namespace
         if namespace is None:
             base_filename = os.path.basename(obj_file)
-            namespace = base_filename.replace('.obj', '').replace('.asm', '').upper()
+            namespace = base_filename.replace('.obj', '').replace('.asm', '')  # Preserve case
         else:
-            namespace = namespace.upper()
+            namespace = namespace  # Preserve case
+        
+        # Store the object BEFORE processing imports to prevent recursive overwrites
+        self.loaded_objects[normalized_path] = obj
         
         # Recursively load imports
         for import_file in obj.imports:
             # Check if it's a .asm file and convert to .obj
             import_obj_file = import_file.replace('.asm', '.obj')
-            import_path = os.path.join(self.source_dir, import_obj_file)
+            base_obj_name = os.path.basename(import_obj_file)
+            
+            # Try different paths to find the import
+            possible_paths = [
+                # Same directory as the current object file (for compiled objects)
+                os.path.join(os.path.dirname(obj_file), base_obj_name),
+                # Same directory as the current object file with full path
+                os.path.join(os.path.dirname(obj_file), import_obj_file),
+                # Relative to source directory
+                os.path.join(self.source_dir, import_obj_file),
+                # Try drivers subdirectory relative to main obj location
+                os.path.join(os.path.dirname(obj_file), 'drivers', base_obj_name),
+                # Try drivers subdirectory relative to source directory
+                os.path.join(self.source_dir, 'drivers', base_obj_name),
+                # Try relative to main source directory structure
+                os.path.join(os.path.dirname(obj_file), '..', 'drivers', base_obj_name)
+            ]
+            
+            import_path = None
+            for path in possible_paths:
+                normalized_path = os.path.normpath(path)
+                if os.path.exists(normalized_path):
+                    import_path = normalized_path
+                    break
+            
+            if import_path is None:
+                raise FileNotFoundError(f"Could not find import file: {import_obj_file}. Tried paths: {possible_paths}")
             
             # Import files don't get a namespace override unless explicitly specified
-            import_base = os.path.basename(import_file).replace('.asm', '').replace('.obj', '').upper()
+            import_base = os.path.basename(import_file).replace('.asm', '').replace('.obj', '')  # Preserve case
             self.load_object(import_path, import_base, namespace)
         
         # Register labels with namespace
@@ -112,7 +141,6 @@ class Linker:
             # Also register without namespace for local references within same file
             self.global_labels[label_name] = absolute_addr
         
-        self.loaded_objects[normalized_path] = obj
         return obj
     
     def link(self, main_obj_file: str) -> Dict[int, int]:
@@ -140,8 +168,9 @@ class Linker:
                 
                 # Copy bytecode to memory image
                 for i, word in enumerate(bytecode):
+                    addr = segment_base + i
                     if word != 0:  # Only store non-zero values
-                        self.memory_image[segment_base + i] = word
+                        self.memory_image[addr] = word
         
         # Resolve all relocations
         for obj_file, obj in self.loaded_objects.items():

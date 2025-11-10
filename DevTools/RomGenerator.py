@@ -82,8 +82,8 @@ instruction_set = [
         'name': 'str_addr', 'op_code': 0x07, # storing value to RAM location from RAM address in register : STR REB, REA
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
         'steps': generateInstruction([
-            GPR_B_ADDRESS_OUT | MAR_WRITE,            # load address from B-Register
-            PC_ADDRESS_OUT | GPR_DATA_OUT | RAM_WRITE # load value to write from A-Register
+            GPR_B_ADDRESS_OUT | MAR_WRITE,                  # load address from B-Register
+            GPR_B_ADDRESS_OUT | GPR_DATA_OUT | RAM_WRITE    # load value to write from A-Register
         ])
     },
     

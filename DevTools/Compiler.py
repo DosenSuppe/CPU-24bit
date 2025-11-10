@@ -114,8 +114,8 @@ class Assembler:
             except ValueError: raise ValueError(f"Invalid direct address: {pOperand}")
         elif hasattr(self.Registers, pOperand.upper()):
             return 'register', self.ParseRegister(pOperand)
-        elif re.match(r'^[A-Z_][A-Z0-9_.]*$', pOperand.upper()):
-            return 'symbol', pOperand.upper()
+        elif re.match(r'^[A-Za-z_][A-Za-z0-9_.]*$', pOperand):
+            return 'symbol', pOperand  # Preserve original case
         else:
             raise ValueError(f"Unrecognized operand format: {pOperand}")
 
@@ -139,10 +139,10 @@ class Assembler:
                 continue
             
             if line.upper().startswith('!IMPORT'):
-                match = re.match(r'!IMPORT\s+(\S+)(?:\s+AS\s+(\S+))?', line, re.IGNORECASE)
+                match = re.match(r'!IMPORT\s+(["\']?)([^"\']+)\1(?:\s+AS\s+(\S+))?', line, re.IGNORECASE)
                 if match:
-                    import_file = match.group(1)
-                    namespace = match.group(2).upper() if match.group(2) else os.path.basename(import_file).replace('.asm', '').upper()
+                    import_file = match.group(2)  # Get the filename without quotes
+                    namespace = match.group(3).upper() if match.group(3) else os.path.basename(import_file).replace('.asm', '').upper()
                     import_namespaces[import_file] = namespace
         
         for line_num, line in enumerate(lines, 1):
@@ -154,7 +154,7 @@ class Assembler:
                 continue
             
             if line.startswith('.'):
-                current_segment = line[1:].strip().upper()
+                current_segment = line[1:].strip()  # Preserve original case
                 if current_segment not in obj.segments:
                     obj.segments[current_segment] = []
                 segment_offset = len(obj.segments[current_segment])
@@ -162,9 +162,9 @@ class Assembler:
             
             # Check for import directive
             if line.upper().startswith('!IMPORT'):
-                match = re.match(r'!IMPORT\s+(\S+)(?:\s+AS\s+(\S+))?', line, re.IGNORECASE)
+                match = re.match(r'!IMPORT\s+(["\']?)([^"\']+)\1(?:\s+AS\s+(\S+))?', line, re.IGNORECASE)
                 if match:
-                    import_file = match.group(1)
+                    import_file = match.group(2)  # Get the filename without quotes
                     obj.imports.append(import_file)
                 continue
             
@@ -172,7 +172,7 @@ class Assembler:
             if line.endswith(':'):
                 if current_segment is None:
                     raise SyntaxError(f"Line {line_num}: Label '{line[:-1]}' defined outside any segment")
-                label_name = line[:-1].strip().upper()
+                label_name = line[:-1].strip()  # Preserve original case
                 obj.labels[label_name] = (current_segment, segment_offset)
                 continue
             
@@ -435,20 +435,57 @@ def main(input_file, output_file):
         print(f"Assembly failed: {e}")
         sys.exit(1)
     
+    # Determine output directory structure based on input file path
+    input_path = os.path.normpath(input_file)
+    input_parts = input_path.split(os.sep)
+    
+    # Check if we should auto-determine the output path
+    if output_file is None and 'src' in input_parts:
+        src_index = input_parts.index('src')
+        # Get the path before 'src'
+        base_path = os.sep.join(input_parts[:src_index])
+        # Get the relative path after 'src'
+        relative_path = os.sep.join(input_parts[src_index + 1:])
+        # Remove the .asm extension
+        relative_path_no_ext = os.path.splitext(relative_path)[0]
+        
+        # Create the bin directory structure
+        bin_dir = os.path.join(base_path, 'bin', os.path.dirname(relative_path_no_ext))
+        if bin_dir and not os.path.exists(bin_dir):
+            os.makedirs(bin_dir, exist_ok=True)
+        
+        # Determine the final output file path
+        final_output = os.path.join(base_path, 'bin', relative_path_no_ext)
+    elif output_file is not None:
+        # Use the provided output file
+        final_output = output_file
+        output_dir = os.path.dirname(final_output + ".obj")
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+    else:
+        # Fallback: use input filename without extension in current directory
+        final_output = os.path.splitext(os.path.basename(input_file))[0]
+    
     # Write object file
-    with open(output_file + ".obj", 'w') as f:
+    with open(final_output + ".obj", 'w') as f:
         json.dump(obj.to_dict(), f, indent=2)
     
-    print(f"Object file generated: {output_file}.obj")
+    print(f"Object file generated: {final_output}.obj")
     print(f"Segments: {list(obj.segments.keys())}")
     print(f"Labels: {len(obj.labels)}")
     print(f"Relocations: {len(obj.relocations)}")
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("Usage: python assembler.py <input.asm> <output>")
+    if len(sys.argv) < 2:
+        print("Usage: python Compiler.py <input.asm> [output_base_name]")
+        print("If output_base_name is not provided, directory structure will be auto-determined from input path")
+        print("Example: python Compiler.py os/src/drivers/JoystickDriver.asm")
+        print("         -> outputs to os/bin/drivers/JoystickDriver.obj")
         sys.exit(1)
     
-    main(sys.argv[1], sys.argv[2])
+    input_file = sys.argv[1]
+    output_file = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    main(input_file, output_file)
     
