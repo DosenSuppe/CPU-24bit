@@ -15,7 +15,6 @@ InitKernel:
     JP KernalLoop
 
 KernalLoop: ; keeping the CPU busy
-    NOP
     JP KernalLoop
 
 HALT
