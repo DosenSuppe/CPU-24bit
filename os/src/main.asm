@@ -12,9 +12,12 @@ RTI
 
 .Kernel
 InitKernel:
+    LDI REB, #0x1
+
     JP KernalLoop
 
 KernalLoop: ; keeping the CPU busy
+    ADD REA, REB
     JP KernalLoop
 
 HALT
