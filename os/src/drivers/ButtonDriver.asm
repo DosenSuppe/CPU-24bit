@@ -1,63 +1,41 @@
 .ButtonDriver
 HandleInterrupt:
-    ; saving registers
-    PUSH REA 
-    PUSH REB
     PUSH REX
     PUSH REY
+    PUSH REZ
 
-    ; reading the state
-    LDI REA, ButtonInterfaceAddress
-    LDI REB, [REA]
-
-    ; checking for state (1 = up , 2 = down)
-    LDI REX, #0x1
-    SUB REB, REX, REY
-    JPZ ButtonUpPressed
-
-    LDI REX, #0x2
-    SUB REB, REX, REY
+    GET_INT_DATA REX
+    
+    LDI REY, #2       ; button down has been pressed
+    SUB REX, REY, REZ
     JPZ ButtonDownPressed
 
+    LDI REY, #1       ; button up has been pressed
+    SUB REX, REY, REZ
+    JPZ ButtonUpPressed
 
     _InterruptHandled:
-    ; restoring registers
+    POP REZ
     POP REY
     POP REX
-    POP REB
-    POP REA
-    
     RTI
 
 ; Whenever the up-button was pressed
 ButtonUpPressed:
+    PUSH REA
 
-    ; getting display value
-    LDI REA, DisplayInterfaceAddress
-    LDI REB, #0x1
+    LDI REA, #1
+    ADD REQ, REA
 
-    LDI REX, [REA]
-
-    ; incrementing display value
-    ADD REX, REB
-
-    ; writing back display value
-    STR [REA], REX
-
+    POP REA    
     JP _InterruptHandled
 
 ; Whenever the down-button was pressed
 ButtonDownPressed:
-    ; getting display value
-    LDI REA, DisplayInterfaceAddress
-    LDI REB, #0x1
+    PUSH REA
 
-    LDI REX, [REA]
+    LDI REA, #1
+    SUB REQ, REA
 
-    ; decrementing display value
-    SUB REX, REB
-
-    ; writing back display value
-    STR [REA], REX
-
+    POP REA
     JP _InterruptHandled

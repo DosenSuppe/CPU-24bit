@@ -9,7 +9,6 @@ JP InitKernel
 .ResetVector
 JP ButtonDriver.HandleInterrupt
 
-
 .Kernel
 InitKernel:
     LDI REB, #0x1
@@ -20,4 +19,3 @@ KernalLoop: ; keeping the CPU busy
     ADD REA, REB
     JP KernalLoop
 
-HALT
