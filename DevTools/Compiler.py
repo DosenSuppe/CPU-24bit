@@ -16,7 +16,7 @@ def GenerateALUAInput(pRegister: int) -> int:
     return (pRegister & 0xF) << 16
 
 def GenerateALUBInput(pRegister: int) -> int:
-    print((pRegister & 0xF) << 20)
+    print(pRegister)
     return (pRegister & 0xF) << 20
 
 
@@ -242,8 +242,8 @@ class Assembler:
                 
                 # A-input = dest register, B-input = src register, destination = dest register
                 bytecode_word = (opcode | 
-                               GenerateALUAInput(srcVal) | 
-                               GenerateALUBInput(destVal) | 
+                               GenerateALUAInput(destVal) | 
+                               GenerateALUBInput(srcVal) | 
                                GenerateDestinationRegister(destVal))
                 
             elif len(operands) == 3:

@@ -7,8 +7,8 @@ SET_SP  Stack           ; Set Stack Pointer
 JP InitKernel
 
 .ResetVector
-CALL ButtonDriver.HandleInterrupt
-RTI
+JP ButtonDriver.HandleInterrupt
+
 
 .Kernel
 InitKernel:
