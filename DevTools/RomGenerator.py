@@ -291,6 +291,23 @@ instruction_set = [
         ])
     },
     
+    # PCI instructions
+    {
+        'name': 'readid', 'op_code': 0x24, # reads the interrupt device ID
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            PC_ADDRESS_OUT | INT_READ_ID | GPR_B_WRITE
+        ])
+    },
+    
+    {
+        'name': 'readdata', 'op_code': 0x25, # reads the interrupt device Data
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            PC_ADDRESS_OUT | INT_READ_DATA | GPR_B_WRITE
+        ])
+    },
+    
     # interrupt instructions
     {
         'name': 'rti', 'op_code': 0xfe, # return from interrupt

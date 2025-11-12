@@ -38,6 +38,9 @@ BUS_GRANT = 1 << 30
 
 HALT = 1 << 31
 
+INT_READ_ID = 1 << 32
+INT_READ_DATA = 1 << 33
+
 FR_DATA_OUT = 1 << 37
 FR_WRITE = 1 << 38
 FR_WRITE_FROM_RAM = 1 << 39

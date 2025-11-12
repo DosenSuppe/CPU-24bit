@@ -16,7 +16,6 @@ def GenerateALUAInput(pRegister: int) -> int:
     return (pRegister & 0xF) << 16
 
 def GenerateALUBInput(pRegister: int) -> int:
-    print(pRegister)
     return (pRegister & 0xF) << 20
 
 
@@ -50,6 +49,9 @@ INSTRUCTION_SET = {
     'GET_SP': 0x21,
     'GET_PC': 0x22,
     'SET_IVR': 0x23,
+    
+    'GET_INT_ID': 0x24,
+    'GET_INT_DATA': 0x25,
 
     'RTI': 0xFE,
     'INT': 0xFF
@@ -348,6 +350,15 @@ class Assembler:
                 bytecode_word = opcode | GenerateSourceRegister(srcVal) | GenerateDestinationRegister(destVal)
             else:
                 raise SyntaxError(f"STR destination must be a direct address, symbol, or register: STR <[addr]>, <reg> or STR <symbol>, <reg> or STR <reg>, <reg>")
+        
+        elif mnemonic in ['GET_INT_ID', 'GET_INT_DATA']:
+            destType, destVal = self.ParseOperand(operands[0])
+            
+            if destType == 'register':
+                opcode = self.InstructionSet[mnemonic]
+                bytecode_word = opcode | GenerateDestinationRegister(destVal)
+            else:
+                raise SyntaxError(f"{mnemonic} operand must be a register")
         
         # JP, JPZ, JPC, CALL
         elif mnemonic in ['JP', 'JPZ', 'JPC', 'CALL']:
