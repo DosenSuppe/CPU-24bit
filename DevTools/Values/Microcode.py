@@ -47,7 +47,3 @@ FR_WRITE_FROM_RAM = 1 << 39
 
 def GenerateALUOperation(pOperation: int) -> int:
     return (pOperation & 0xF) << 11
-
-def GenerateRegister(pRegister: int) -> int:
-    return (pRegister & 0x1F) << 17
-
