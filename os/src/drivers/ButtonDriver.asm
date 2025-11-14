@@ -22,20 +22,21 @@ HandleInterrupt:
 
 ; Whenever the up-button was pressed
 ButtonUpPressed:
-    PUSH REA
 
-    LDI REA, #1
-    ADD REQ, REA
+    LDI REX, #0xE00000
+    LDI REZ, #1
 
-    POP REA    
+    SHL REQ, REZ
+    STR [REX], REQ
+    
     JP _InterruptHandled
 
 ; Whenever the down-button was pressed
 ButtonDownPressed:
-    PUSH REA
+    LDI REX, #0xE00000
+    LDI REZ, #1
 
-    LDI REA, #1
-    SUB REQ, REA
+    SHR REQ, REZ
+    STR [REX], REQ
 
-    POP REA
     JP _InterruptHandled

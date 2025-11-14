@@ -12,6 +12,7 @@ JP ButtonDriver.HandleInterrupt
 .Kernel
 InitKernel:
     LDI REB, #0x1
+    LDI REQ, #7
 
     JP KernalLoop
 
