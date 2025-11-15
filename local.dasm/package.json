@@ -1,0 +1,25 @@
+{
+  "name": "dasm",
+  "displayName": "D-Assembly Language",
+  "description": "Syntax highlighter for D-Assembly language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "dasm",
+      "aliases": ["D-Assembly", "dasm"],
+      "extensions": [".asm",".dasm"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "dasm",
+      "scopeName": "source.dasm",
+      "path": "./syntaxes/dasm.tmLanguage.json"
+    }]
+  }
+}

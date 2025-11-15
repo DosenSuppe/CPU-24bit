@@ -1,0 +1,165 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "D-Assembly",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#sections"
+        },
+        {
+            "include": "#directives"
+        },
+        {
+            "include": "#registers"
+        },
+        {
+            "include": "#namespaced-references"
+        },
+        {
+            "include": "#label-references"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#labels"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [{
+                "name": "keyword.control.dasm",
+                "match": "\\b(NOP|HALT|MOV|LDI|STR|ADD|SUB|MUL|DIV|SHL|SHR|NOT|AND|NAND|OR|XOR|JP|JPC|JPZ|CALL|RTS|PUSH|POP|GET_SP|SET_SP|GET_PC|SET_IVR|INT|RTI|GET_INT_ID|GET_INT_DATA)\\b"
+            }]
+        },
+        "sections": {
+            "name": "entity.name.function.section.dasm",
+            "match": "^\\s*\\.([a-zA-Z_][a-zA-Z0-9_.]*)"
+        },
+        "registers": {
+            "name": "variable.parameter.register.dasm",
+            "match": "\\b(REN|REO|REP|REQ|RER|RES|RET|REU|REV|REW|REX|REY|REZ|REA|REB|REC)\\b"
+        },
+        "labels": {
+            "name": "entity.name.function.label.dasm",
+            "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_.]*):"
+        },
+        "namespaced-references": {
+            "name": "entity.name.function.namespaced-label.dasm",
+            "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+            "captures": {
+                "1": {
+                    "name": "variable.other.namespace.dasm"
+                },
+                "2": {
+                    "name": "entity.name.function.label.dasm"
+                }
+            }
+        },
+        "label-references": {
+            "patterns": [
+                {
+                    "name": "meta.jump-namespaced.dasm",
+                    "match": "\\b(SET_IVR|SET_SP|GET_PC|GET_SP|JP|JPZ|JPC|CALL)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.dasm"
+                        },
+                        "2": {
+                            "name": "variable.other.namespace.dasm"
+                        },
+                        "3": {
+                            "name": "entity.name.function.label.dasm"
+                        }
+                    }
+                },
+                {
+                    "name": "meta.jump-label.dasm",
+                    "match": "\\b(SET_IVR|SET_SP|GET_PC|GET_SP|JP|JPZ|JPC|CALL)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.dasm"
+                        },
+                        "2": {
+                            "name": "entity.name.function.label.dasm"
+                        }
+                    }
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.dasm",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.dasm",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.immediate.dasm",
+                    "match": "#(0x[0-9a-fA-F]+|\\d+)"
+                },
+                {
+                    "name": "constant.numeric.direct-address.dasm",
+                    "match": "(\\[(0x[0-9a-fA-F]+|\\d+)\\])"
+                },
+                {
+                    "name": "constant.numeric.decimal.dasm",
+                    "match": "\\b\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.hex.dasm",
+                    "match": "\\b0x[0-9a-fA-F]+\\b"
+                }
+            ]
+        },
+        "comments": {
+            "name": "comment.line.semicolon.dasm",
+            "begin": ";",
+            "end": "($)",
+            "patterns": [
+                {
+                    "match": "[^\\n]+"
+                }
+            ]
+        },
+        "directives": {
+            "patterns": [
+                {
+                    "comment": "Matches the whole !IMPORT directive, handling file path and namespace.",
+                    "name": "meta.directive.import.dasm",
+                    "match": "(!\\b(import|IMPORT)\\b)\\s+(\\S+)(?:\\s+(as|AS)\\s+(\\S+))?",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.directive.import.dasm"
+                        },
+                        "3": {
+                            "name": "string.unquoted.filename.dasm"
+                        },
+                        "4": {
+                            "name": "keyword.other.alias.dasm"
+                        },
+                        "5": {
+                            "name": "variable.other.namespace.dasm"
+                        }
+                    }
+                }
+            ]
+        }
+        
+    },
+    "scopeName": "source.dasm"
+}
