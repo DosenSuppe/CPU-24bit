@@ -1,37 +1,43 @@
 # The 24-Bit CPU
 
-This Repo includes my concept of a 24-Bit CPU.
+This repository contains my implementation of a 24-bit CPU, building upon the 16-bit CPU I created in 2023 as part of a school project.
 
-## What does this CPU offer?
-- 16 MB RAM
-- ALU that can perform:
-  - addition, subtraction, multiplication, division
-  - logical AND, OR and XOR operations
-  - bit-shifting
-  - comparision  ('>', '<', '=')
-- 16 expansion ports
-- 11 general purpose registers
-- up to 256 unique instructions
-- clock speed of up to 3.8Khz (messured on [my hardware](/docs/MyHardware.md))
+At the time, my understanding of CPU architecture was limited, and the 16-bit design relied on several improvised solutions. While it met the requirements of the project, I have since revisited the topic and invested significant time in researching proper CPU design principles and instruction handling.
 
-## What is Planned?
-- comprehensive [instruction set](/docs/InstructionSet.md)
-- adding I/O devices such as:
-  - 256x256 display (including a [display-adapter](/docs/DisplayAdapter.md))
-  - output terminal
-  - a clock displaying UTC time (more [here](/docs/Clock.md))
-  - keyboard
-- [assembly compiler](docs/AssemblyCompiler.md)
-- a port of a limited C compiler
+This project represents a cleaner, more robust, and more thoughtfully designed successor to that earlier work. It incorporates the lessons I’ve learned and reflects a deeper understanding of computer architecture.
 
-## More Technical Information
-- [instruction layout](/docs/InstructionSet.md#Layout)
-- [addressing registers](/docs/Registers.md)
+I recognize that there is still much more to explore in this field, and I welcome feedback, suggestions, and contributions to help improve this project further.
+
+## Current State
+- Implements a RISC-style instruction set architecture (ISA) on a von Neumann bus architecture.
+- Supports 16 MB of memory, with 14 MB available as addressable RAM and 2 MB reserved for memory-mapped I/O (MMIO) and storage.
+- Provides 16 general-purpose registers (GPRs).
+- Includes interrupt handling support.
+- Features a 24-bit Arithmetic Logic Unit (ALU).
+
+## Plans
+This project was created primarily for educational purposes, but my goal is to evolve it into a fully functional 24-bit CPU with features that make software development on it practical and enjoyable.
+
+Planned improvements include:
+
+- Refining the instruction set to address current limitations with immediate constants and memory access.
+- For example, instructions such as LDI REA, [#0xF00000] or ADD REA, #1, REC are currently unsupported and require workarounds.
+- Expanding instruction support to make operations more intuitive and efficient.
+- Enhancing overall CPU functionality with features commonly found in modern educational CPU designs.
+- Improving documentation and tooling to make the CPU easier to understand, use, and extend.
+
+## Docs
+- [How to use the compiler](/docs/DevelopmentSoftware/Compiler.md)
+- [How to use the linker](/docs/DevelopmentSoftware/Linker.md)
+- [How to install the syntax highlighter](/docs/DevelopmentSoftware/DasmCodeHighlighter.md)
+- [How to use the assembly language](/docs/Dasm/index.md)
+- [CPU components explained](/docs/CpuParts/index.md)
+
 
 ## Requirements
 - Visual Studio Code
+- Python 3.10
 - [Logisim Evolution](https://github.com/logisim-evolution/logisim-evolution) ([latest binaries](https://github.com/logisim-evolution/logisim-evolution/releases))
 
 #
 **This Repo is actively maintained.** <br>
-**10/07/2025**

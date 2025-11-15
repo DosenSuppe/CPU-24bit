@@ -1,4 +1,4 @@
-# Instruction Set
+# Instruction Set [DEPRECATED]
 
 I am planning to add a comprehensive instruction set that offers what it takes to port a limited C compiler.
 
