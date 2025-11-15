@@ -5,8 +5,6 @@ from pprint import pprint
 
 from Values.Microcode import *
 from Values.Registers import *
-
-from Values.MicroInstructions import MicroInstructions as MI
 from Values.OperationsALU import ALU
 
 FETCH = [MAR_WRITE | PC_ADDRESS_OUT,  PC_ADDRESS_OUT | RAM_READ | INSTRUCTION_LOAD | PC_INCREMENT]
@@ -227,7 +225,7 @@ instruction_set = [
             SP_INCREMENT,
             SP_ADDRESS_OUT | MAR_WRITE,
             SP_ADDRESS_OUT | RAM_READ | PC_WRITE,
-            PC_ADDRESS_OUT | MAR_WRITE
+            PC_ADDRESS_OUT | MAR_WRITE | PC_INCREMENT
         ])
     },
 
@@ -306,6 +304,40 @@ instruction_set = [
         'steps': generateInstruction([
             PC_ADDRESS_OUT | INT_READ_DATA | GPR_B_WRITE
         ])
+    },
+
+    # compare
+    {
+        'name': 'cmp_equal_true', 'op_code': 0x26,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'cmp_equal_false', 'op_code': 0x26,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+
+    {
+        'name': 'cmp_less_true', 'op_code': 0x27,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'cmp_less_false', 'op_code': 0x27,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+
+    {
+        'name': 'cmp_great_true', 'op_code': 0x28,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'cmp_great_false', 'op_code': 0x28,
+        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
     },
     
     # interrupt instructions
