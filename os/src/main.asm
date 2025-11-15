@@ -1,4 +1,5 @@
 !IMPORT "drivers/ButtonDriver.asm" as ButtonDriver
+!IMPORT "programs/pong.asm" as pong
 
 .SetUp
 SET_IVR ResetVector     ; Start of Reset-Vector
@@ -11,12 +12,10 @@ JP ButtonDriver.HandleInterrupt
 
 .Kernel
 InitKernel:
-    LDI REB, #0x1
-    LDI REQ, #7
-
     JP KernalLoop
 
 KernalLoop: ; keeping the CPU busy
-    ADD REA, REB
-    JP KernalLoop
+    CALL pong.Main
+    
+    HALT
 
