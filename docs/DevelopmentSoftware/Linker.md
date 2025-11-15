@@ -7,7 +7,7 @@ This step is essential because the CPU requires a complete memory image with cor
 
 For Windows:
 <pre>
-py .\DevTools\Compiler.py &lt;entry_file.obj&gt; &lt;memory.cfg&gt; &lt;output.o&gt;
+py .\DevTools\Linker.py &lt;entry_file.obj&gt; &lt;memory.cfg&gt; &lt;output.o&gt;
 </pre>
 - Entry object: The starting object file produced by the compiler (e.g., main.obj).
 - Memory config: A configuration file (memory.cfg) that defines segment mapping and absolute placement.
