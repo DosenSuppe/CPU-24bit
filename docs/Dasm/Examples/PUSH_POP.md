@@ -1,7 +1,7 @@
 # PUSH and POP Examples
 
 ## PUSH
-The PUSH instruction is used to push the value of a [Register]() onto the [Stack]().<br>
+The PUSH instruction is used to push the value of a [Register](../../CpuParts/Register.md) onto the [Stack]().<br>
 It's used to preserve values when jumping to another routine. These values can later be restored using the POP instruction.
 
 ## Syntax

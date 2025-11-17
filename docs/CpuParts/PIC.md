@@ -26,7 +26,7 @@ The 25 Bit input is split into two segments.
 
 ## How to connect a device
 1. Connect a device to one of the 7 device inputs
-2. Make sure that your software handles the interrupt through the [ResetVector]() correctly
+2. Make sure that your software handles the interrupt through the [ResetVector](./ResetVector.md) correctly
 3. Trigger the interrupt, data is optional to provide
 
 ## Appearance

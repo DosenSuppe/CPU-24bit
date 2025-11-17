@@ -1,5 +1,5 @@
 # Mode
-Accessing [RAM]() or [Registers]() is done through Modes.
+Accessing [RAM](./RAM.md) or [Registers](./Register.md) is done through Modes.
 Modes tell the chip what to do exactly.
 
 A Mode is a 3 bit value.

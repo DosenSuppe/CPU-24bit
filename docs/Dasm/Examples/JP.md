@@ -1,7 +1,7 @@
 # JP Example
 
 The JP instruction is used to unconditionally jump to a section in a program.
-It does not safe the current value of the [PC]() to the [Stack]()!
+It does not safe the current value of the [PC](../../CpuParts/PC.md) to the [Stack](../../CpuParts/Stack.md)!
 
 ## Syntax
 `JP <[Label | Address]>`

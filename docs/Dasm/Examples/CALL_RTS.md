@@ -2,7 +2,7 @@
 
 The CALL instruction allows to unconditionally execute code referenced to a [Label](../Labels.md).
 
-Unlike [JP](), when invoking a CALL instruction, the [PC]() is pushed onto the [Stack]().<br>
+Unlike [JP](./JP.md), when invoking a CALL instruction, the [PC](../../CpuParts/PC.md) is pushed onto the [Stack](../../CpuParts/Stack.md).<br>
 This allows the program to later resume at this position.
 
 ## Syntax
@@ -26,7 +26,7 @@ MyLabel:
 
 The RTS instruction allows to resume execute from the latest CALL origin.
 
-The RTS will pop the top most stack value and place it into the [PC]().
+The RTS will pop the top most stack value and place it into the [PC](../../CpuParts/PC.md).
 
 ## Syntax
 `RTS`
