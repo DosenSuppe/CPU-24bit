@@ -205,7 +205,7 @@ instruction_set = [
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
             RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
-            PC_ADDRESS_OUT | MAR_WRITE | PC_DATA_OUT,
+            PC_DATA_OUT | PC_ADDRESS_OUT | MAR_WRITE,
             RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
         ])
     },
