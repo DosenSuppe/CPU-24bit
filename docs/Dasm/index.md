@@ -9,9 +9,10 @@ Please note that the instruction set may be subject to change. <br>
 
 ![Instruction Set](./img/InstructionSet.png)
 
-## Syntax
+## Features
 - [Segments](./Segments.md)
 - [Labels](./Labels.md)
+- [Imports](./Imports.md)
 - [Code Examples](./Examples/)
 
 

@@ -36,13 +36,13 @@ HALT    ; stop CPU execution
 </pre>
 
 ## RTI Example
-The RTI instruction is similar to the [RTS]() instruction. The different is mainly that RTI pops two values from the Stack back into registers. These being the PC and Flag-Register's values. These values have been pushed onto the stack by the interrupt.
+The RTI instruction is similar to the [RTS](./CALL_RTS.md) instruction. The different is mainly that RTI pops two values from the Stack back into registers. These being the PC and Flag-Register's values. These values have been pushed onto the stack by the interrupt.
 
 ## Syntax
 `RTI`
 
 ## GET_INT_ID Example
-The GET_INT_ID instruction makes it possible for the software to read the ID of the device that caused the interrupt. The ID is loaded into a [Register]().
+The GET_INT_ID instruction makes it possible for the software to read the ID of the device that caused the interrupt. The ID is loaded into a [Register](../../CpuParts/Register.md).
 
 ## Syntax
 `GET_INT_ID <Register>`
@@ -70,7 +70,7 @@ Device1Driver:
 </pre>
 
 ## GET_INT_DATA Example
-The GET_INT_DATA instruction makes it possible for the software to read data associated by the interrupt and load it into a [Register]().
+The GET_INT_DATA instruction makes it possible for the software to read data associated by the interrupt and load it into a [Register](../../CpuParts/Register.md).
 
 ## Syntax
 `GET_INT_DATA <Register>`

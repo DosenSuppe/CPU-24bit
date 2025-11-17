@@ -1,6 +1,6 @@
 # LDI Example
 
-The LDI instruction allows immediate values to be loaded into registers.
+The LDI instruction allows immediate values to be loaded into a [Register](../../CpuParts/Register.md).
 These values can be by reference or constants.
 
 ## Syntax
