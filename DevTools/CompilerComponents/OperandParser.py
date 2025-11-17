@@ -11,6 +11,7 @@ class OperandType:
     DIRECT_ADDRESS = 'direct_address'
     REGISTER = 'register'
     SYMBOL = 'symbol'
+    MEMORY_CONFIG_SYMBOL = 'memory_config_symbol'
 
 
 class OperandParser:
@@ -93,6 +94,11 @@ class OperandParser:
         elif self.IsRegister(operand):
             return OperandType.REGISTER, self.ParseRegister(operand)
         
+        # Memory config symbol with $ prefix: $FrameBuffer.Start, $FrameBuffer.Size
+        elif operand.startswith('$') and re.match(r'^\$[A-Za-z_][A-Za-z0-9_.]*$', operand):
+            # Keep the $ prefix to distinguish from regular symbols
+            return OperandType.MEMORY_CONFIG_SYMBOL, operand
+        
         # Symbol: label_name, function_start
         elif re.match(r'^[A-Za-z_][A-Za-z0-9_.]*$', operand):
             return OperandType.SYMBOL, operand
@@ -108,13 +114,21 @@ class OperandParser:
         except ValueError:
             raise OperandError(f"Invalid immediate value: {pOperand}")
     
-    def _ParseBracketed(self, pOperand: str) -> Tuple[str, int]:
-        """Parse bracketed format (direct address or register indirect)."""
+    def _ParseBracketed(self, pOperand: str) -> Tuple[str, int | str]:
+        """Parse bracketed format (direct address, register indirect, or symbol address)."""
         inner = pOperand[1:-1].strip()
         
         # Register indirect: [REA]
         if self.IsRegister(inner):
             return OperandType.REGISTER, self.ParseRegister(inner)
+        
+        # Memory config symbol: [$FrameBuffer.Start]
+        if inner.startswith('$') and re.match(r'^\$[A-Za-z_][A-Za-z0-9_.]*$', inner):
+            return OperandType.MEMORY_CONFIG_SYMBOL, inner
+        
+        # Symbol address: [SliderPos], [label_name]
+        if re.match(r'^[A-Za-z_][A-Za-z0-9_.]*$', inner):
+            return OperandType.SYMBOL, inner
         
         # Direct address: [0x1000] or [#100]
         if inner.startswith('#'):

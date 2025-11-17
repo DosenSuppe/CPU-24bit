@@ -28,8 +28,13 @@ class MemoryConfig:
                     start_addr = int(match.group(2), 0)
                     size = int(match.group(3), 0)
                     self.segments[segment_name] = (start_addr, size)
-                    # Also store as a memory symbol (without the leading dot)
+                    
+                    # Store original segment symbol
                     self.memory_symbols[segment_name] = start_addr
+                    
+                    # Create .Start and .Size symbols for $SectionName.Start / $SectionName.Size support
+                    self.memory_symbols[f"{segment_name}.Start"] = start_addr
+                    self.memory_symbols[f"{segment_name}.Size"] = size
                 else:
                     raise SyntaxError(f"Invalid memory config line: {line}")
     
@@ -52,6 +57,7 @@ class RelocatableObject:
         self.labels: Dict[str, Tuple[str, int]] = {}
         self.relocations: List[Dict] = []
         self.imports: List[str] = []
+        self.declarations: Dict[str, str] = {}
     
     @staticmethod
     def from_dict(data: dict) -> 'RelocatableObject':
@@ -60,6 +66,7 @@ class RelocatableObject:
         obj.labels = data['labels']
         obj.relocations = data['relocations']
         obj.imports = data['imports']
+        obj.declarations = data.get('declarations', {})
         return obj
 
 
@@ -71,6 +78,7 @@ class Linker:
         self.loaded_objects: Dict[str, RelocatableObject] = {}
         self.global_labels: Dict[str, int] = {}
         self.memory_image: Dict[int, int] = {}  # Changed to dictionary for sparse storage
+        self.declared_variables: Dict[str, str] = {}  # Variable name -> expression
     
     def load_object(self, obj_file: str, namespace: str = None, parent_namespace: str = None) -> RelocatableObject:
         """Load an object file and assign it a namespace."""
@@ -144,15 +152,70 @@ class Linker:
             # Also register without namespace for local references within same file
             self.global_labels[label_name] = absolute_addr
         
+        # Collect declarations
+        for var_name, expression in obj.declarations.items():
+            # Register with namespace
+            qualified_name = f"{namespace}.{var_name}"
+            self.declared_variables[qualified_name] = expression
+            
+            # Also register without namespace for local references within same file
+            self.declared_variables[var_name] = expression
+        
         return obj
+    
+    def _evaluate_expression(self, expression: str) -> int:
+        """
+        Evaluate a declaration expression.
+        
+        Supports:
+        - Memory config symbols: $FrameBuffer.Start, $FrameBuffer.Size
+        - Arithmetic: +, -, *, /
+        - Numeric literals: 42, 0xFF
+        
+        Args:
+            expression: Expression string to evaluate
+            
+        Returns:
+            Evaluated integer value
+        """
+        # Replace memory config symbols with their values (as hex strings to preserve format)
+        # Sort by length (longest first) to avoid partial replacements
+        expr = expression
+        sorted_symbols = sorted(self.mem_config.memory_symbols.items(), 
+                               key=lambda x: len(x[0]), reverse=True)
+        for mem_symbol, value in sorted_symbols:
+            # Replace $SymbolName with hex notation that Python eval can handle
+            expr = expr.replace(f'${mem_symbol}', f'0x{value:X}')
+        
+        # Evaluate the expression (supports basic arithmetic)
+        try:
+            # Use Python's eval for arithmetic evaluation
+            # This is safe since we control the input (from assembly files)
+            result = eval(expr, {"__builtins__": {}}, {})
+            return int(result)
+        except Exception as e:
+            raise ValueError(f"Failed to evaluate expression '{expression}': {e}")
+    
+    def _resolve_declarations(self):
+        """Resolve all declared variables and add them to global_labels."""
+        print(f"Resolving {len(self.declared_variables)} declared variables...")
+        for var_name, expression in self.declared_variables.items():
+            try:
+                value = self._evaluate_expression(expression)
+                self.global_labels[var_name] = value
+                print(f"  {var_name} = {expression} -> 0x{value:06X}")
+            except ValueError as e:
+                print(f"  Warning: {e}")
     
     def link(self, main_obj_file: str) -> Dict[int, int]:
         print(f"Loading main object file: {main_obj_file}")
         main_obj = self.load_object(main_obj_file)
         
-        # Register memory configuration symbols as global labels
-        for symbol_name, address in self.mem_config.memory_symbols.items():
-            self.global_labels[symbol_name] = address
+        # Resolve declared variables after loading all objects
+        self._resolve_declarations()
+        
+        # Note: Memory configuration symbols are kept separate and only used for 
+        # relocations that have the $ prefix (handled during compilation)
         
         # Fixed size for 24-bit addressing (2^24 cells)
         MEMORY_SIZE = 1 << 24
@@ -191,10 +254,21 @@ class Linker:
                 abs_position = segment_base + offset
                 
                 # Resolve symbol
-                if symbol not in self.global_labels:
-                    raise ValueError(f"Undefined symbol: {symbol}")
+                target_address = None
                 
-                target_address = self.global_labels[symbol]
+                # Check if it's a memory config symbol (marked with $MEM$ prefix)
+                if symbol.startswith("$MEM$"):
+                    # Extract the actual memory config symbol name
+                    mem_symbol = symbol[5:]  # Remove $MEM$ prefix
+                    if mem_symbol in self.mem_config.memory_symbols:
+                        target_address = self.mem_config.memory_symbols[mem_symbol]
+                    else:
+                        raise ValueError(f"Undefined memory config symbol: {mem_symbol}")
+                elif symbol in self.global_labels:
+                    # Regular symbol
+                    target_address = self.global_labels[symbol]
+                else:
+                    raise ValueError(f"Undefined symbol: {symbol}")
                 
                 # Patch memory image
                 self.memory_image[abs_position] = target_address

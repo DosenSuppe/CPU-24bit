@@ -31,6 +31,7 @@ class RelocatableObject:
         self.labels: Dict[str, Tuple[str, int]] = {}
         self.relocations: List[Dict[str, Any]] = []
         self.imports: List[str] = []
+        self.declarations: Dict[str, str] = {}  # Variable name -> expression string
     
     def AddLabel(self, pLabelName: str, pSegment: str, pOffset: int) -> None:
         """
@@ -70,6 +71,16 @@ class RelocatableObject:
         """
         if pImportFile not in self.imports:
             self.imports.append(pImportFile)
+    
+    def AddDeclaration(self, pVariableName: str, pExpression: str) -> None:
+        """
+        Add a variable declaration.
+        
+        Args:
+            pVariableName: Name of the declared variable
+            pExpression: Expression string to evaluate (e.g., "$FrameBuffer.Start + 1")
+        """
+        self.declarations[pVariableName] = pExpression
     
     def EnsureSegment(self, pSegmentName: str) -> None:
         """
@@ -121,7 +132,8 @@ class RelocatableObject:
             'segments': self.segments,
             'labels': self.labels,
             'relocations': self.relocations,
-            'imports': self.imports
+            'imports': self.imports,
+            'declarations': self.declarations
         }
     
     @staticmethod
@@ -140,6 +152,7 @@ class RelocatableObject:
         obj.labels = data['labels']
         obj.relocations = data['relocations']
         obj.imports = data['imports']
+        obj.declarations = data.get('declarations', {})  # Support older files without declarations
         return obj
     
     def __repr__(self) -> str:
