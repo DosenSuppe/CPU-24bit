@@ -83,12 +83,12 @@ class OperandParser:
         
         # Immediate value: #42, #0xFF
         if operand.startswith('#'):
-            return self._parse_immediate(operand)
+            return self._ParseImmediate(operand)
         
         # Direct address or register indirect: [addr] or [REG]
         elif operand.startswith('[') and operand.endswith(']'):
-            return self._parse_bracketed(operand)
-        
+            return self._ParseBracketed(operand)
+
         # Register: REA, REB, etc.
         elif self.IsRegister(operand):
             return OperandType.REGISTER, self.ParseRegister(operand)
