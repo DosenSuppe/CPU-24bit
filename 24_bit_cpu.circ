@@ -8783,6 +8783,9 @@ c000080100 40 200100 80120 20000000 4000002 22*0 200008
       <a name="fanout" val="4"/>
       <a name="incoming" val="24"/>
     </comp>
+    <comp lib="0" loc="(300,60)" name="Pull Resistor"/>
+    <comp lib="0" loc="(320,60)" name="Pull Resistor"/>
+    <comp lib="0" loc="(340,60)" name="Pull Resistor"/>
     <comp lib="0" loc="(350,310)" name="Pin">
       <a name="appearance" val="NewPins"/>
       <a name="label" val="Read_In"/>
@@ -8795,7 +8798,6 @@ c000080100 40 200100 80120 20000000 4000002 22*0 200008
       <a name="appearance" val="NewPins"/>
       <a name="label" val="MAR_Write"/>
     </comp>
-    <comp lib="0" loc="(350,90)" name="Ground"/>
     <comp lib="0" loc="(370,160)" name="Splitter">
       <a name="appear" val="center"/>
       <a name="bit0" val="3"/>
@@ -8906,21 +8908,21 @@ c000080100 40 200100 80120 20000000 4000002 22*0 200008
     <wire from="(290,150)" to="(320,150)"/>
     <wire from="(290,160)" to="(330,160)"/>
     <wire from="(290,170)" to="(350,170)"/>
+    <wire from="(300,60)" to="(300,70)"/>
+    <wire from="(300,70)" to="(310,70)"/>
     <wire from="(310,140)" to="(310,210)"/>
     <wire from="(310,140)" to="(350,140)"/>
     <wire from="(310,70)" to="(310,140)"/>
-    <wire from="(310,70)" to="(320,70)"/>
     <wire from="(320,150)" to="(320,210)"/>
     <wire from="(320,150)" to="(350,150)"/>
     <wire from="(320,240)" to="(320,250)"/>
     <wire from="(320,250)" to="(410,250)"/>
-    <wire from="(320,70)" to="(320,150)"/>
-    <wire from="(320,70)" to="(330,70)"/>
+    <wire from="(320,60)" to="(320,150)"/>
     <wire from="(330,160)" to="(330,210)"/>
     <wire from="(330,160)" to="(350,160)"/>
     <wire from="(330,70)" to="(330,160)"/>
-    <wire from="(330,70)" to="(350,70)"/>
-    <wire from="(350,70)" to="(350,90)"/>
+    <wire from="(330,70)" to="(340,70)"/>
+    <wire from="(340,60)" to="(340,70)"/>
     <wire from="(370,160)" to="(390,160)"/>
     <wire from="(370,340)" to="(380,340)"/>
     <wire from="(380,320)" to="(380,340)"/>
