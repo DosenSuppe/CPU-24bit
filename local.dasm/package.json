@@ -1,7 +1,7 @@
 {
   "name": "dasm",
   "displayName": "D-Assembly Language",
-  "description": "Syntax highlighter for D-Assembly language",
+  "description": "Syntax highlighter and language server for D-Assembly language",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.104.0"
@@ -9,6 +9,23 @@
   "categories": [
     "Programming Languages"
   ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.104.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
   "contributes": {
     "languages": [{
       "id": "dasm",

@@ -6,6 +6,9 @@
             "include": "#comments"
         },
         {
+            "include": "#register-annotations"
+        },
+        {
             "include": "#sections"
         },
         {
@@ -158,6 +161,18 @@
                     }
                 }
             ]
+        },
+        "register-annotations": {
+            "name": "meta.register-annotation.dasm",
+            "match": "^\\s*@([A-Z]{3}):\\s*(.*?)\\s*$",
+            "captures": {
+                "1": {
+                    "name": "variable.parameter.register.dasm"
+                },
+                "2": {
+                    "name": "string.unquoted.description.dasm"
+                }
+            }
         }
         
     },

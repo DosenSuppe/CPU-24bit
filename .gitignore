@@ -4,6 +4,14 @@
 
 *.autosave
 
+# VS Code Extension Development
+local.dasm/node_modules/
+local.dasm/out/
+local.dasm/*.vsix
+local.dasm/package-lock.json
+local.dasm/.vscode/
+local.dasm/vsc-extension-quickstart.md
+
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
