@@ -66,7 +66,7 @@ connection.onInitialized(() => {
         connection.client.register(DidChangeConfigurationNotification.type, undefined);
     }
     if (hasWorkspaceFolderCapability) {
-        connection.workspace.onDidChangeWorkspaceFolders(_event => {
+        connection.workspace.onDidChangeWorkspaceFolders((event: any) => {
             connection.console.log('Workspace folder change event received.');
         });
     }
@@ -144,12 +144,12 @@ function parseRegisterAnnotations(text: string, documentUri: string): void {
 }
 
 // Update labels when document changes
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent((change: any) => {
     parseRegisterAnnotations(change.document.getText(), change.document.uri);
 });
 
 // Update labels when document is opened
-documents.onDidOpen(event => {
+documents.onDidOpen((event: any) => {
     parseRegisterAnnotations(event.document.getText(), event.document.uri);
 });
 
@@ -206,7 +206,7 @@ connection.onHover((textDocumentPosition: TextDocumentPositionParams): Hover | u
     connection.console.log(`Label info found for "${wordAtPosition}": ${labelInfo ? 'yes' : 'no'}`);
     
     if (labelInfo && labelInfo.registers.length > 0) {
-        let hoverText = '**Uses Registers:**\n\n';
+        let hoverText = `**${labelInfo.name}**\n\n`;
         for (const reg of labelInfo.registers) {
             hoverText += `**${reg.register}**: ${reg.description}  \n`;
         }
