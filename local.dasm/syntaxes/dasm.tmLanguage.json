@@ -142,6 +142,46 @@
         "directives": {
             "patterns": [
                 {
+                    "comment": "Matches the !DECLARE directive with variable assignment.",
+                    "name": "meta.directive.declare.dasm",
+                    "match": "(!\\b(DECLARE|declare)\\b)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(=)\\s*([^;\\n\\r]+)",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.directive.declare.dasm"
+                        },
+                        "3": {
+                            "name": "variable.other.declare.dasm"
+                        },
+                        "4": {
+                            "name": "keyword.operator.assignment.dasm"
+                        },
+                        "5": {
+                            "patterns": [
+                                {
+                                    "comment": "Memory segment references like $ProgramData.Start",
+                                    "name": "variable.other.memory-segment.dasm",
+                                    "match": "\\$([a-zA-Z_][a-zA-Z0-9_]*)\\.([a-zA-Z_][a-zA-Z0-9_]*)"
+                                },
+                                {
+                                    "comment": "Hexadecimal numbers",
+                                    "name": "constant.numeric.hex.dasm",
+                                    "match": "0x[0-9a-fA-F]+"
+                                },
+                                {
+                                    "comment": "Decimal numbers",
+                                    "name": "constant.numeric.decimal.dasm",
+                                    "match": "\\b\\d+\\b"
+                                },
+                                {
+                                    "comment": "Arithmetic operators",
+                                    "name": "keyword.operator.arithmetic.dasm",
+                                    "match": "[+\\-*/]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
                     "comment": "Matches the whole !IMPORT directive, handling file path and namespace.",
                     "name": "meta.directive.import.dasm",
                     "match": "(!\\b(import|IMPORT)\\b)\\s+(\\S+)(?:\\s+(as|AS)\\s+(\\S+))?",
