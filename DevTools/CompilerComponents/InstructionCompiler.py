@@ -246,6 +246,20 @@ class LDIInstructionCompiler:
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
         
+        # Memory config symbol reference
+        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET['LDI'][0]
+            bytecode = opcode | GenerateDestinationRegister(destVal)
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': segment,
+                'offset': offset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
+        
         # Register
         elif srcType == OperandType.REGISTER:
             opcode = INSTRUCTION_SET['LDI'][2]
@@ -306,6 +320,20 @@ class STRInstructionCompiler:
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
         
+        # Memory config symbol reference
+        elif destType == OperandType.MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET['STR'][0]
+            bytecode = opcode | GenerateSourceRegister(srcVal)
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + destVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
+        
         # Register indirect
         elif destType == OperandType.REGISTER:
             opcode = INSTRUCTION_SET['STR'][1]
@@ -356,6 +384,19 @@ class ControlFlowInstructionCompiler:
                 'offset': pOffset + 1,
                 'type': 'absolute',
                 'symbol': opVal
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+        
+        # Memory config symbol reference
+        elif opType == OperandType.MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET[pMnemonic][0]
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + opVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
         
@@ -422,6 +463,19 @@ class StackInstructionCompiler:
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
         
+        # Memory config symbol reference
+        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET['PUSH'][1]
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+        
         else:
             raise InstructionError("PUSH operand must be register, immediate, or symbol")
     
@@ -471,8 +525,18 @@ class SystemInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
         else:
-            raise InstructionError("SET_SP operand must be immediate or symbol")
+            raise InstructionError("SET_SP operand must be immediate, symbol, or memory config symbol")
     
     @staticmethod
     def CompileGetSP(pOperands: list) -> InstructionResult:
@@ -523,8 +587,18 @@ class SystemInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+            # Use a special prefix to mark this as a memory config symbol
+            symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
         else:
-            raise InstructionError("SET_IVR operand must be immediate or symbol")
+            raise InstructionError("SET_IVR operand must be immediate, symbol, or memory config symbol")
     
     @staticmethod
     def CompileGetIntID(pOperands: list) -> InstructionResult:

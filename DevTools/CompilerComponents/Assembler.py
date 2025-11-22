@@ -74,7 +74,7 @@ class Assembler:
         return obj
     
     def _ProcessImports(self, pLines: List[str], pRelocatableObject: RelocatableObject) -> None:
-        """Process import directives."""
+        """Process import and declare directives."""
         for line in pLines:
             cleanLine = self._CleanLine(line)
             if not cleanLine:
@@ -89,6 +89,18 @@ class Assembler:
                 if match:
                     import_file = match.group(2)
                     pRelocatableObject.AddImport(import_file)
+            
+            elif cleanLine.upper().startswith('!DECLARE'):
+                # Parse: !DECLARE VariableName = expression
+                match = re.match(
+                    r'!DECLARE\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)',
+                    cleanLine,
+                    re.IGNORECASE
+                )
+                if match:
+                    var_name = match.group(1)
+                    expression = match.group(2).strip()
+                    pRelocatableObject.AddDeclaration(var_name, expression)
     
     def _CompileLines(self, pLines: List[str], pRelocatableObject: RelocatableObject) -> None:
         """Compile assembly lines into bytecode."""
@@ -107,6 +119,10 @@ class Assembler:
                 
                 # Import directive (skip, already processed)
                 if cleanLine.upper().startswith('!IMPORT'):
+                    continue
+                
+                # Declare directive (skip, already processed)
+                if cleanLine.upper().startswith('!DECLARE'):
                     continue
                 
                 # Label definition
@@ -135,6 +151,10 @@ class Assembler:
         """Remove comments and whitespace from a line."""
         if ';' in line:
             line = line[:line.find(';')]
+            
+        if ('@' in line):
+            line = line[:line.find('@')]
+            
         return line.strip()
     
     def _ProcessSegment(self, pLine: str, pRelocatableObject: RelocatableObject) -> str:

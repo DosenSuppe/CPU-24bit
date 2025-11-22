@@ -364,7 +364,7 @@ instruction_set = [
             SP_ADDRESS_OUT | MAR_WRITE,
             PC_DATA_OUT | RAM_WRITE | SP_DECREMENT,
             
-            SP_ADDRESS_OUT | MAR_WRITE,
+            PC_DATA_OUT | SP_ADDRESS_OUT | MAR_WRITE,
             FR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
             
             PC_WRITE | IVR_OUT | PC_ADDRESS_OUT
