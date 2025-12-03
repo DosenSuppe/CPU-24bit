@@ -10,7 +10,14 @@ from Values.OperationsALU import ALU
 FETCH = [MAR_WRITE | PC_ADDRESS_OUT,  PC_ADDRESS_OUT | RAM_READ | INSTRUCTION_LOAD | PC_INCREMENT]
 
 def generateInstruction(pInstruction: list[int] = []):
-    return FETCH + [instruction for instruction in pInstruction] + [INSTRUCTION_END | INTERRUPT_CHECK]
+    # Optimization: merge INSTRUCTION_END into the last execution step.
+    # This saves 1 clock cycle per instruction by combining the end/interrupt
+    # check with the final execution step, since FETCH[0] of the next
+    # instruction will correctly restore MAR from PC anyway.
+    if pInstruction:
+        return FETCH + pInstruction[:-1] + [pInstruction[-1] | INSTRUCTION_END | INTERRUPT_CHECK]
+    else:
+        return FETCH + [INSTRUCTION_END | INTERRUPT_CHECK]
 
 # shared across multiple jump instructions:
 JUMP_INSTRUCTION = generateInstruction([
@@ -85,7 +92,7 @@ instruction_set = [
         ])
     },
     
-    # ALU Operations (ALU operations could be optimized to include the Instruction_End cycle within the ALU operation itself, making them 3 cycles instead of 4)
+    # ALU Operations (INSTRUCTION_END is merged into the execute step, making them 3 cycles instead of 4)
     {
         'name': 'add', 'op_code': 0x08, # adding values with registers only (e.g. ADD REA, REB or ADD REA, REB, REZ)
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
@@ -235,7 +242,6 @@ instruction_set = [
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
             GPR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            PC_ADDRESS_OUT | MAR_WRITE
          ])
     },
     {
@@ -244,7 +250,6 @@ instruction_set = [
         'steps': generateInstruction([
             SP_ADDRESS_OUT | MAR_WRITE,
             GPR_DATA_OUT | RAM_WRITE | SP_DECREMENT,
-            PC_ADDRESS_OUT | MAR_WRITE
          ])
     },
     {
@@ -254,7 +259,6 @@ instruction_set = [
             SP_INCREMENT,
             SP_ADDRESS_OUT | MAR_WRITE,
             GPR_B_WRITE | RAM_READ | SP_ADDRESS_OUT,
-            PC_ADDRESS_OUT | MAR_WRITE
          ])
     },
 
@@ -306,7 +310,14 @@ instruction_set = [
         ])
     },
 
-    # compare
+    # compare - sets flags without modifying any register (uses ALU SUB for zero/carry, hardware comparator for L/G/E)
+    {
+        'name': 'cmp', 'op_code': 0x29, # compare two registers: CMP REA, REB
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([GenerateALUOperation(ALU.SUB) | FR_WRITE | PC_ADDRESS_OUT])
+    },
+
+    # conditional jumps on compare flags
     {
         'name': 'cmp_equal_true', 'op_code': 0x26,
         'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
@@ -352,9 +363,7 @@ instruction_set = [
             SP_INCREMENT,
             
             SP_ADDRESS_OUT | MAR_WRITE,
-            PC_WRITE | RAM_READ | SP_ADDRESS_OUT,
-            
-            INTERRUPT_REQUEST_ACKNOWLEDGE
+            PC_WRITE | RAM_READ | SP_ADDRESS_OUT | INTERRUPT_REQUEST_ACKNOWLEDGE
         ])
     },
     {
@@ -392,7 +401,7 @@ def create_instruction_microcode(instruction):
                         flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (gtf << 1) | etf
 
                         for step_index, control_word in enumerate(instruction['steps']):
-                            address = (flag_value << 19) | (instruction['op_code'] << 5) | step_index
+                            address = (flag_value << 13) | (instruction['op_code'] << 5) | step_index
                             
                             microcode_steps.append({
                                 'name': instruction['name'],
@@ -423,7 +432,7 @@ def generate_microcode(instruction_set):
 
 def fill_microcode_addresses(microcode):
     
-    MAX_ROM_ADDRESS = (0x1F << 19) | (0xFF << 5) | 0x1F
+    MAX_ROM_ADDRESS = (0x1F << 13) | (0xFF << 5) | 0x1F
     print(f"MAX_ROM_ADDRESS: {MAX_ROM_ADDRESS} (0x{MAX_ROM_ADDRESS:06X})")
     
     final_output = [0] * (MAX_ROM_ADDRESS + 1)

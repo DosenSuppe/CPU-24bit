@@ -191,6 +191,29 @@ class ALUInstructionCompiler:
         return InstructionResult(bytecode)
 
 
+class CMPInstructionCompiler:
+    """Compiler for CMP (Compare) instruction - sets flags without modifying registers."""
+    
+    @staticmethod
+    def Compile(pOperands: list) -> InstructionResult:
+        """Compile CMP instruction: CMP REA, REB"""
+        if len(pOperands) != 2:
+            raise InstructionError(f"CMP requires 2 operands, got {len(pOperands)}")
+        
+        aType, aVal = pOperands[0]
+        bType, bVal = pOperands[1]
+        
+        if aType != OperandType.REGISTER or bType != OperandType.REGISTER:
+            raise InstructionError("CMP requires register operands")
+        
+        opcode = INSTRUCTION_SET['CMP']
+        bytecode = (opcode |
+                   GenerateALUAInput(aVal) |
+                   GenerateALUBInput(bVal))
+        
+        return InstructionResult(bytecode)
+
+
 class LDIInstructionCompiler:
     """Compiler for LDI (Load Immediate) instruction."""
     
@@ -615,17 +638,3 @@ class SystemInstructionCompiler:
         bytecode = opcode | GenerateDestinationRegister(destVal)
         return InstructionResult(bytecode)
     
-    @staticmethod
-    def CompileGetIntData(pOperands: list) -> InstructionResult:
-        """Compile GET_INT_DATA instruction."""
-        if len(pOperands) != 1:
-            raise InstructionError(f"GET_INT_DATA requires 1 operand, got {len(pOperands)}")
-        
-        destType, destVal = pOperands[0]
-        
-        if destType != OperandType.REGISTER:
-            raise InstructionError("GET_INT_DATA operand must be a register")
-        
-        opcode = INSTRUCTION_SET['GET_INT_DATA']
-        bytecode = opcode | GenerateDestinationRegister(destVal)
-        return InstructionResult(bytecode)

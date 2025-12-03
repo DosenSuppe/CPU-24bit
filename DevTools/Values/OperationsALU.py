@@ -12,6 +12,9 @@ class ALU:
     NOR = 0xA
     NOT = 0xB
 
+    A_THROUGH = 0xE
+    B_THROUGH = 0xF
+
 
     
     

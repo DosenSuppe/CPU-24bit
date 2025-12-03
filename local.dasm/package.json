@@ -1,5 +1,6 @@
 {
   "name": "dasm",
+  "publisher": "local",
   "displayName": "D-Assembly Language",
   "description": "Syntax highlighter and language server for D-Assembly language",
   "version": "0.0.1",

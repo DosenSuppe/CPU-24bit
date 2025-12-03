@@ -14,6 +14,7 @@ Example:
 
 import sys
 import json
+import os
 
 from CompilerComponents.Assembler import Assembler
 from CompilerComponents.InstructionSet import INSTRUCTION_SET
@@ -35,7 +36,8 @@ def CompileFile(pInputFile: str, pOutputFile: str = None) -> None:
         AssemblerError: If compilation fails
     """
     # Create assembler instance
-    assembler = Assembler(INSTRUCTION_SET, Register)
+    sourceDir = os.path.dirname(os.path.abspath(pInputFile))
+    assembler = Assembler(INSTRUCTION_SET, Register, sourceDir)
     
     try:
         with open(pInputFile, 'r') as f:

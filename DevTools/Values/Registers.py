@@ -3,7 +3,7 @@ class Register:
     REA = 0x0
     REB = 0x1
     REC = 0x2
-    
+
     REN = 0x3
     REO = 0x4
     REP = 0x5

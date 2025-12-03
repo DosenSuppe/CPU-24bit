@@ -68,39 +68,3 @@ Device1Driver:
 
     RTI     ; returning from the interrupt 
 </pre>
-
-## GET_INT_DATA Example
-The GET_INT_DATA instruction makes it possible for the software to read data associated by the interrupt and load it into a [Register](../../CpuParts/Register.md).
-
-## Syntax
-`GET_INT_DATA <Register>`
-
-## GET_INT_DATA Example
-Assuming that the ResetVector and Stack-Pointer have been set up already.
-<pre>
-.ResetVector    ; an incoming interrupt from a device
-    PUSH REA    ; preserving the value of REA by pushing it onto the stack
-    PUSH REB
-
-    GET_INT_DATA REA  ; getting the ID of the device that caused the interrupt
-
-    LDI REB, #1
-
-    SUB REA, REB    ; substracting 1 from the data to check for the action context
-    JPZ IncrementCounter    ; increment the counter
-    JP DecrementCounter     ; else we decrement the counter
-
-IncrementCounter:
-    [...]
-    POP REB     ; restoring modified registers
-    POP REA
-
-    RTI     ; returning from the interrupt 
-
-DecrementCounter:
-    [...]
-    POP REB     ; restoring modified registers
-    POP REA
-
-    RTI     ; returning from the interrupt 
-</pre>

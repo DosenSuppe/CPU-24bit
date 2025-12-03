@@ -20,7 +20,6 @@ def GenerateALUBInput(pRegister: int) -> int:
     """Encode a register value for the ALU B input field."""
     return (pRegister & 0xF) << 20
 
-
 # Instruction opcodes
 INSTRUCTION_SET = {
     'NOP': 0x00,
@@ -52,14 +51,17 @@ INSTRUCTION_SET = {
     'GET_PC': 0x22,
     'SET_IVR': 0x23,
     'GET_INT_ID': 0x24,
-    'GET_INT_DATA': 0x25,
     'RTI': 0xFE,
-    'INT': 0xFF
+    'INT': 0xFF,
+    'CMP': 0x29,
+    'JPE': [0x26],
+    'JPL': [0x27],
+    'JPG': [0x28]
 }
 
 # Instruction categories for easier classification
 SIMPLE_INSTRUCTIONS = {'NOP', 'HALT', 'RTS', 'RTI', 'INT'}
 ALU_BINARY_OPERATIONS = {'ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'SHR', 'NAND', 'AND', 'OR', 'XOR', 'NOR'}
 ALU_UNARY_OPERATIONS = {'NOT'}
-CONTROL_FLOW_INSTRUCTIONS = {'JP', 'JPZ', 'JPC', 'CALL'}
+CONTROL_FLOW_INSTRUCTIONS = {'JP', 'JPZ', 'JPC', 'CALL', 'JPE', 'JPL', 'JPG'}
 STACK_INSTRUCTIONS = {'PUSH', 'POP'}
