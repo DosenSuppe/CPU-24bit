@@ -1,25 +1,14 @@
 """Instruction set definitions and encoding utilities."""
 
 
-def GenerateSourceRegister(pRegister: int) -> int:
+def GenerateARegister(pRegister: int) -> int:
     """Encode a register value for the source register field."""
     return (pRegister & 0x1F) << 8
 
 
-def GenerateDestinationRegister(pRegister: int) -> int:
+def GenerateBRegister(pRegister: int) -> int:
     """Encode a register value for the destination register field."""
     return (pRegister & 0x1F) << 12
-
-
-def GenerateALUAInput(pRegister: int) -> int:
-    """Encode a register value for the ALU A input field."""
-    return (pRegister & 0xF) << 16
-
-
-def GenerateALUBInput(pRegister: int) -> int:
-    """Encode a register value for the ALU B input field."""
-    return (pRegister & 0xF) << 20
-
 
 # Instruction opcodes
 INSTRUCTION_SET = {
