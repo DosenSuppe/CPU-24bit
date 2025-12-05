@@ -5655,6 +5655,10 @@ a00000 920000 4000002 27*0 200008 8000d 4002008008 4000002
     <appear>
       <rect fill="none" height="170" stroke="#000000" width="110" x="50" y="50"/>
       <text dominant-baseline="central" font-family="SansSerif" font-size="12" text-anchor="middle" x="102" y="138">Display Adapter</text>
+      <text dominant-baseline="central" font-family="SansSerif" font-size="12" text-anchor="middle" x="66" y="69">data</text>
+      <text dominant-baseline="central" font-family="SansSerif" font-size="12" text-anchor="middle" x="76" y="89">address</text>
+      <text dominant-baseline="central" font-family="SansSerif" font-size="12" text-anchor="middle" x="68" y="199">clear</text>
+      <text dominant-baseline="central" font-family="SansSerif" font-size="12" text-anchor="middle" x="137" y="59">output</text>
       <circ-anchor facing="east" x="160" y="50"/>
       <circ-port dir="in" pin="400,370" x="50" y="200"/>
       <circ-port dir="in" pin="400,430" x="50" y="70"/>
@@ -6082,9 +6086,6 @@ a00000 920000 4000002 27*0 200008 8000d 4002008008 4000002
       <a name="bit9" val="1"/>
       <a name="incoming" val="27"/>
       <a name="spacing" val="2"/>
-    </comp>
-    <comp lib="0" loc="(430,800)" name="Clock">
-      <a name="appearance" val="NewPins"/>
     </comp>
     <comp lib="0" loc="(450,630)" name="Splitter">
       <a name="appear" val="right"/>
