@@ -20,10 +20,10 @@
 
 ; -----------------------------------------------------------------------------
 ; WritePixel - Draw a single pixel on the video display.
-; @REA: X coordinate (0-63)
-; @REB: Y coordinate (0-63)
-; @REC: Color (0-15)
 ; -----------------------------------------------------------------------------
+@REA: X coordinate (0-63)
+@REB: Y coordinate (0-63)
+@REC: Color (0-15)
 WritePixel:
     PUSH REN
     PUSH REX
@@ -60,8 +60,8 @@ ClearScreen:
 
 ; -----------------------------------------------------------------------------
 ; FillScreen - Fill the entire display with a single color.
-; @REA: Color (0-15)
 ; -----------------------------------------------------------------------------
+@REA: Color (0-15)
 FillScreen:
     PUSH REB
     PUSH REC
@@ -118,11 +118,11 @@ FillScreenDone:
 
 ; -----------------------------------------------------------------------------
 ; DrawHLine - Draw a horizontal line.
-; @REA: X start (0-15)
-; @REB: Y position (0-15)
-; @REC: Color (0-15)
-; @REX: Length (pixels)
 ; -----------------------------------------------------------------------------
+@REA: X start (0-15)
+@REB: Y position (0-15)
+@REC: Color (0-15)
+@REX: Length (pixels)
 DrawHLine:
     PUSH REA
     PUSH REX
@@ -145,11 +145,11 @@ DrawHLineDone:
 
 ; -----------------------------------------------------------------------------
 ; DrawVLine - Draw a vertical line.
-; @REA: X position (0-15)
-; @REB: Y start (0-15)
-; @REC: Color (0-15)
-; @REX: Length (pixels)
 ; -----------------------------------------------------------------------------
+@REA: X position (0-15)
+@REB: Y start (0-15)
+@REC: Color (0-15)
+@REX: Length (pixels)
 DrawVLine:
     PUSH REB
     PUSH REX
@@ -172,12 +172,12 @@ DrawVLineDone:
 
 ; -----------------------------------------------------------------------------
 ; DrawBox - Draw a rectangle outline.
-; @REA: X start
-; @REB: Y start
-; @REC: Color
-; @REX: Width
-; @REY: Height
 ; -----------------------------------------------------------------------------
+@REA: X start
+@REB: Y start
+@REC: Color
+@REX: Width
+@REY: Height
 DrawBox:
     PUSH REA
     PUSH REB
