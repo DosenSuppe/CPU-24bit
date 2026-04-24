@@ -12,13 +12,14 @@
 ;   2 (0x32) = Run animation demo
 ;   3 (0x33) = Clear screen
 ;   4 (0x34) = Show system info (boot logo)
-;   5 (0x35) = Ray tracing demo
+;   5 (0x35) = Show image
 ;   0 (0x30) = Shutdown system
 ; =============================================================================
 
 !IMPORT "../drivers/Keyboard.asm" as Keyboard
 !IMPORT "../drivers/Video.asm" as Video
 !IMPORT "../programs/Demo.asm" as Demo
+!IMPORT "../programs/ImageViewer.asm" as ImageViewer
 
 .Shell
 
@@ -75,11 +76,11 @@ ShellProcessKey:
     SUB REB, REC
     JPZ ShellShowInfo
 
-    ; Check for '5' (0x35) - ray trace demo
+    ; Check for '5' (0x35) - show image
     MOV REB, REA
     LDI REC, #0x35
     SUB REB, REC
-    JPZ ShellRunRayTrace
+    JPZ ShellShowImage
 
     ; Check for '0' (0x30) - shutdown
     MOV REB, REA
@@ -107,10 +108,6 @@ ShellRunAnimDemo:
     CALL Demo.DiagonalWipe
     JP ShellLoop
 
-ShellRunRayTrace:
-    CALL Demo.RayTrace
-    JP ShellLoop
-
 ShellClearScreen:
     CALL Video.ClearScreen
     ; Draw ready indicator
@@ -124,6 +121,10 @@ ShellShowInfo:
     CALL Video.ClearScreen
     CALL Video.DrawBootLogo
     CALL Video.DrawMenu
+    JP ShellLoop
+
+ShellShowImage:
+    CALL ImageViewer.ShowImage
     JP ShellLoop
 
 ShellShutdown:

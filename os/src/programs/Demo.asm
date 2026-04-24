@@ -1,8 +1,8 @@
 ; =============================================================================
 ; Demo Programs
 ; =============================================================================
-; Visual demo programs that can be triggered from the shell.
-; These demonstrate the CPU's capabilities on the 64x64 display.
+; Visual demo programs showcasing the 256-color display.
+; All routines use the optimized Video driver packed-word rendering.
 ; =============================================================================
 
 !IMPORT "../drivers/Video.asm" as Video
@@ -10,8 +10,9 @@
 .Demo
 
 ; -----------------------------------------------------------------------------
-; ColorPattern - Draw a color gradient pattern across the display.
-; Each column gets a color (column mod 16), creating a repeating rainbow.
+; ColorPattern - Draw a full 256-color gradient across the display.
+; Uses FillRect for fast column-wide fills — each column is a solid color.
+; 64 columns × 4 colors per column step = smooth gradient.
 ; -----------------------------------------------------------------------------
 ColorPattern:
     PUSH REA
@@ -23,45 +24,31 @@ ColorPattern:
 
     CALL Video.ClearScreen
 
-    LDI REX, #0               ; x = 0 (also serves as color index)
+    LDI REN, #0               ; column x = 0
 
-ColorPatternOuterLoop:
-    LDI REY, #0               ; y = 0
+ColorPatternLoop:
+    ; color = x * 4 (maps 0-63 → 0-252 across XTerm256 palette)
+    LDI REX, #4
+    MUL REN, REX, REC         ; REC = x * 4 = color
 
-ColorPatternInnerLoop:
-    MOV REA, REX               ; x coordinate
-    MOV REB, REY               ; y coordinate
-    MOV REC, REX               ; color = column index mod 16
-    PUSH REN
-    LDI REN, #0x0F
-    AND REC, REN               ; color = x & 0xF
-    POP REN
-    CALL Video.WritePixel
+    ; FillRect: x=REN, y=0, color=REC, width=1, height=64
+    MOV REA, REN
+    LDI REB, #0
+    LDI REX, #1
+    LDI REY, #64
+    CALL Video.FillRect
 
-    ; y++
-    LDI REN, #1
-    ADD REY, REN
-
-    ; if y == 64, next column
-    MOV REA, REY
-    LDI REN, #64
-    SUB REA, REN
-    JPZ ColorPatternNextCol
-
-    JP ColorPatternInnerLoop
-
-ColorPatternNextCol:
     ; x++
-    LDI REN, #1
-    ADD REX, REN
+    LDI REX, #1
+    ADD REN, REX
 
     ; if x == 64, done
-    MOV REA, REX
-    LDI REN, #64
-    SUB REA, REN
+    MOV REA, REN
+    LDI REX, #64
+    SUB REA, REX
     JPZ ColorPatternDone
 
-    JP ColorPatternOuterLoop
+    JP ColorPatternLoop
 
 ColorPatternDone:
     POP REN
@@ -74,7 +61,8 @@ ColorPatternDone:
 
 ; -----------------------------------------------------------------------------
 ; DiagonalWipe - Animate a diagonal color wipe across the display.
-; Draws pixels along diagonals with incrementing colors.
+; Uses DrawLine for fast diagonal rendering with 256-color palette.
+; Draws successive diagonals from top-left to bottom-right.
 ; -----------------------------------------------------------------------------
 DiagonalWipe:
     PUSH REA
@@ -83,86 +71,58 @@ DiagonalWipe:
     PUSH REX
     PUSH REY
     PUSH REN
-    PUSH REQ
 
     CALL Video.ClearScreen
 
-    LDI REQ, #0               ; diagonal index (0-30 covers all diagonals)
-    LDI REN, #1
+    LDI REN, #0               ; diagonal index
 
-DiagWipeOuterLoop:
-    ; For each diagonal d, draw pixels where x+y == d
-    LDI REX, #0               ; x = 0
+DiagWipeLoop:
+    ; Color = diagonal * 2 (wraps through XTerm256)
+    LDI REX, #2
+    MUL REN, REX, REC         ; REC = color
 
-DiagWipeInnerLoop:
-    ; y = diagonal - x
-    MOV REY, REQ
-    SUB REY, REX
+    ; Draw diagonal line for this step
+    ; For diagonal d: line from (0, d) to (d, 0) if d < 64
+    ;                 or from (d-63, 63) to (63, d-63) if d >= 64
 
-    ; if y < 0 (carry flag set from underflow), skip
-    JPC DiagWipeSkipPixel
+    MOV REA, REN
+    LDI REX, #63
+    SUB REA, REX
+    JPZ DiagWipeSecondHalf
+    JPC DiagWipeFirstHalf
 
-    ; if y >= 64, skip
-    MOV REA, REY
-    PUSH REN
-    LDI REN, #64
-    SUB REA, REN
-    POP REN
-    JPZ DiagWipeSkipPixel
-    ; if no zero and no carry, y >= 16 (positive result means y > 16)
-    ; Actually need to check differently. If REA >= 0 and not zero, y > 16.
-    ; For simplicity, just check if y > 15 using carry
-    ; After SUB: if result is 0, y==16 (skip). If carry, y<16 (draw).
+DiagWipeSecondHalf:
+    ; d >= 63: line from (d-63, 63) to (63, d-63)
+    MOV REA, REN
+    LDI REX, #63
+    SUB REA, REX              ; REA = d - 63 = x1
+    LDI REB, #63              ; y1 = 63
+    LDI REX, #63              ; x2 = 63
+    MOV REY, REA              ; y2 = d - 63
+    CALL Video.DrawLine
+    JP DiagWipeAdvance
 
-    ; Verify x is in range (0-63)
-    MOV REA, REX
-    PUSH REN
-    LDI REN, #64
-    SUB REA, REN
-    POP REN
-    JPZ DiagWipeSkipPixel
+DiagWipeFirstHalf:
+    ; d < 63: line from (0, d) to (d, 0)
+    LDI REA, #0               ; x1 = 0
+    MOV REB, REN              ; y1 = d
+    MOV REX, REN              ; x2 = d
+    LDI REY, #0               ; y2 = 0
+    CALL Video.DrawLine
 
-    ; Draw the pixel
-    MOV REA, REX               ; x
-    MOV REB, REY               ; y
-    ; Color = diagonal index mod 16
-    MOV REC, REQ
-    PUSH REN
-    LDI REN, #0x0F
-    AND REC, REN               ; color = diag & 0xF
-    POP REN
-    CALL Video.WritePixel
-
-DiagWipeSkipPixel:
-    ; x++
-    ADD REX, REN
-
-    ; if x == 64, advance to next diagonal
-    MOV REA, REX
-    PUSH REN
-    LDI REN, #64
-    SUB REA, REN
-    POP REN
-    JPZ DiagWipeNextDiag
-
-    JP DiagWipeInnerLoop
-
-DiagWipeNextDiag:
-    ; diagonal++
-    ADD REQ, REN
+DiagWipeAdvance:
+    LDI REX, #1
+    ADD REN, REX
 
     ; if diagonal == 127, done
-    MOV REA, REQ
-    PUSH REN
-    LDI REN, #127
-    SUB REA, REN
-    POP REN
+    MOV REA, REN
+    LDI REX, #127
+    SUB REA, REX
     JPZ DiagWipeDone
 
-    JP DiagWipeOuterLoop
+    JP DiagWipeLoop
 
 DiagWipeDone:
-    POP REQ
     POP REN
     POP REY
     POP REX
@@ -172,7 +132,8 @@ DiagWipeDone:
     RTS
 
 ; -----------------------------------------------------------------------------
-; Checkerboard - Draw a checkerboard pattern.
+; Checkerboard - Draw a checkerboard pattern using FillRect.
+; Draws 8x8 pixel squares in alternating colors.
 ; @REA: Color 1
 ; @REB: Color 2
 ; -----------------------------------------------------------------------------
@@ -183,71 +144,67 @@ Checkerboard:
     PUSH REX
     PUSH REY
     PUSH REN
+    PUSH REO
+    PUSH REP
     PUSH REQ
 
     CALL Video.ClearScreen
 
-    MOV REQ, REA               ; save color 1 in REQ
-    PUSH REB                   ; save color 2 on stack
+    MOV REO, REA              ; REO = color 1
+    MOV REP, REB              ; REP = color 2
 
-    LDI REX, #0               ; x = 0
+    LDI REN, #0               ; tile_y = 0 (tile row: 0,1,2,...,7)
 
-CheckerOuterLoop:
-    LDI REY, #0               ; y = 0
+CheckerYLoop:
+    LDI REQ, #0               ; tile_x = 0 (tile col: 0,1,2,...,7)
 
-CheckerInnerLoop:
-    ; Determine color: (x + y) & 1
-    MOV REA, REX
-    ADD REA, REY
-    LDI REN, #1
-    AND REA, REN               ; REA = (x+y) & 1
+CheckerXLoop:
+    ; Determine color: (tile_x + tile_y) & 1
+    ADD REQ, REN, REA         ; REA = tile_x + tile_y
+    LDI REB, #1
+    AND REA, REB              ; REA = (tile_x + tile_y) & 1
 
-    SUB REA, REN               ; if result is 0, bit was 1
-    JPZ CheckerColor2
-
-    ; Use color 1
-    MOV REC, REQ
+    SUB REA, REB              ; if zero, bit was 1 → color 2
+    JPZ CheckerUseColor2
+    MOV REC, REO              ; color 1
     JP CheckerDraw
-
-CheckerColor2:
-    ; Use color 2
-    POP REC                    ; pop color 2
-    PUSH REC                   ; re-push it for next iteration
+CheckerUseColor2:
+    MOV REC, REP              ; color 2
 
 CheckerDraw:
-    MOV REA, REX               ; x
-    MOV REB, REY               ; y
-    CALL Video.WritePixel
+    ; FillRect(tile_x*8, tile_y*8, color, 8, 8)
+    LDI REX, #8
+    MUL REQ, REX, REA         ; REA = tile_x * 8 = pixel x
+    MUL REN, REX, REB         ; REB = tile_y * 8 = pixel y
+    LDI REX, #8
+    LDI REY, #8
+    CALL Video.FillRect
 
-    ; y++
-    LDI REN, #1
-    ADD REY, REN
+    ; tile_x++
+    LDI REX, #1
+    ADD REQ, REX
 
-    ; if y == 64, next column
-    MOV REA, REY
-    LDI REN, #64
-    SUB REA, REN
-    JPZ CheckerNextCol
+    ; if tile_x == 8, next row
+    MOV REA, REQ
+    LDI REX, #8
+    SUB REA, REX
+    JPZ CheckerNextRow
+    JP CheckerXLoop
 
-    JP CheckerInnerLoop
+CheckerNextRow:
+    LDI REX, #1
+    ADD REN, REX
 
-CheckerNextCol:
-    ; x++
-    LDI REN, #1
-    ADD REX, REN
-
-    ; if x == 64, done
-    MOV REA, REX
-    LDI REN, #64
-    SUB REA, REN
+    MOV REA, REN
+    LDI REX, #8
+    SUB REA, REX
     JPZ CheckerDone
-
-    JP CheckerOuterLoop
+    JP CheckerYLoop
 
 CheckerDone:
-    POP REB                    ; clean up color 2 from stack
-
     POP REQ
+    POP REP
+    POP REO
     POP REN
     POP REY
     POP REX
@@ -255,4 +212,3 @@ CheckerDone:
     POP REB
     POP REA
     RTS
-

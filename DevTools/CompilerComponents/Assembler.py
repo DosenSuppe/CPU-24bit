@@ -1,5 +1,6 @@
 """Main assembler implementation."""
 
+import os
 import re
 
 from typing import List
@@ -9,6 +10,7 @@ from CompilerComponents.InstructionCompiler import (
     SimpleInstructionCompiler,
     MovInstructionCompiler,
     ALUInstructionCompiler,
+    CMPInstructionCompiler,
     LDIInstructionCompiler,
     STRInstructionCompiler,
     ControlFlowInstructionCompiler,
@@ -130,6 +132,26 @@ class Assembler:
                     self._ProcessLabel(cleanLine, currentSegment, pRelocatableObject, lineNum)
                     continue
                 
+                # Data word directive
+                if cleanLine.upper().startswith('DW ') or cleanLine.upper() == 'DW':
+                    if currentSegment is None:
+                        raise SegmentError(
+                            f"DW directive outside any segment: {cleanLine}",
+                            lineNum
+                        )
+                    self._ProcessDataWord(cleanLine, currentSegment, pRelocatableObject, lineNum)
+                    continue
+                
+                # Include binary file directive
+                if cleanLine.upper().startswith('INCBIN ') or cleanLine.upper().startswith('INCBIN\t'):
+                    if currentSegment is None:
+                        raise SegmentError(
+                            f"INCBIN directive outside any segment: {cleanLine}",
+                            lineNum
+                        )
+                    self._ProcessIncBin(cleanLine, currentSegment, pRelocatableObject, lineNum)
+                    continue
+                
                 # Instruction
                 if currentSegment is None:
                     raise SegmentError(
@@ -174,6 +196,86 @@ class Assembler:
         labelName = pLine[:-1].strip()
         offset = pRelocatableObject.GetSegmentOffset(currentSegment)
         pRelocatableObject.AddLabel(labelName, currentSegment, offset)
+    
+    def _ProcessDataWord(self, pLine: str, pSegment: str, pRelocatableObject: RelocatableObject, lineNum: int) -> None:
+        """
+        Process a DW (Define Word) directive to emit raw 24-bit data values.
+        
+        Syntax:
+            DW #0xFF              ; immediate value
+            DW 0xFF               ; plain number
+            DW #1, #2, #3         ; multiple values
+            DW MyLabel             ; symbol reference (creates relocation)
+            DW $VideoDisplay.Start ; memory config reference (creates relocation)
+        """
+        parts = pLine.split(maxsplit=1)
+        if len(parts) < 2:
+            raise SyntaxError("DW requires at least one value", lineNum)
+        
+        values = [v.strip() for v in parts[1].split(',')]
+        for val in values:
+            if not val:
+                raise SyntaxError("Empty value in DW directive", lineNum)
+            
+            if val.startswith('#'):
+                # Immediate value with # prefix
+                numStr = val[1:].strip()
+                try:
+                    number = int(numStr, 0)
+                except ValueError:
+                    raise SyntaxError(f"Invalid number in DW: {val}", lineNum)
+                pRelocatableObject.AppendToSegment(pSegment, number & 0xFFFFFF)
+            
+            elif val.startswith('$'):
+                # Memory config symbol reference
+                offset = pRelocatableObject.GetSegmentOffset(pSegment)
+                pRelocatableObject.AppendToSegment(pSegment, 0)
+                symbol = f"$MEM${val[1:]}"
+                pRelocatableObject.AddRelocation(pSegment, offset, symbol, 'absolute')
+            
+            elif val[0].isdigit():
+                # Plain number (no # prefix)
+                try:
+                    number = int(val, 0)
+                except ValueError:
+                    raise SyntaxError(f"Invalid number in DW: {val}", lineNum)
+                pRelocatableObject.AppendToSegment(pSegment, number & 0xFFFFFF)
+            
+            else:
+                # Symbol/label reference
+                offset = pRelocatableObject.GetSegmentOffset(pSegment)
+                pRelocatableObject.AppendToSegment(pSegment, 0)
+                pRelocatableObject.AddRelocation(pSegment, offset, val, 'absolute')
+    
+    def _ProcessIncBin(self, pLine: str, pSegment: str, pRelocatableObject: RelocatableObject, lineNum: int) -> None:
+        """
+        Process an INCBIN directive to include a binary file as data words.
+        
+        Each byte in the file becomes one 24-bit word (zero-extended).
+        This is ideal for image pixel data where each byte is a color index.
+        
+        Syntax:
+            INCBIN "path/to/file.bin"
+        """
+        match = re.match(r'INCBIN\s+["\']([^"\']+)["\']', pLine, re.IGNORECASE)
+        if not match:
+            raise SyntaxError("INCBIN requires a quoted filename: INCBIN \"file.bin\"", lineNum)
+        
+        filename = match.group(1)
+        # Resolve relative to source directory
+        filepath = os.path.join(self.sourceDir, filename)
+        
+        if not os.path.isfile(filepath):
+            raise SyntaxError(f"INCBIN file not found: {filepath}", lineNum)
+        
+        try:
+            with open(filepath, 'rb') as f:
+                data = f.read()
+        except IOError as e:
+            raise SyntaxError(f"INCBIN could not read file: {e}", lineNum)
+        
+        for byte in data:
+            pRelocatableObject.AppendToSegment(pSegment, byte & 0xFFFFFF)
     
     def _CompileInstruction(self, line: str, segment: str, 
                             pRelocatableObject: RelocatableObject, lineNum: int) -> None:

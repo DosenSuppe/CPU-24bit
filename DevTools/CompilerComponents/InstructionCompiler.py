@@ -191,6 +191,29 @@ class ALUInstructionCompiler:
         return InstructionResult(bytecode)
 
 
+class CMPInstructionCompiler:
+    """Compiler for CMP (Compare) instruction - sets flags without modifying registers."""
+    
+    @staticmethod
+    def Compile(pOperands: list) -> InstructionResult:
+        """Compile CMP instruction: CMP REA, REB"""
+        if len(pOperands) != 2:
+            raise InstructionError(f"CMP requires 2 operands, got {len(pOperands)}")
+        
+        aType, aVal = pOperands[0]
+        bType, bVal = pOperands[1]
+        
+        if aType != OperandType.REGISTER or bType != OperandType.REGISTER:
+            raise InstructionError("CMP requires register operands")
+        
+        opcode = INSTRUCTION_SET['CMP']
+        bytecode = (opcode |
+                   GenerateALUAInput(aVal) |
+                   GenerateALUBInput(bVal))
+        
+        return InstructionResult(bytecode)
+
+
 class LDIInstructionCompiler:
     """Compiler for LDI (Load Immediate) instruction."""
     

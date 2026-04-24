@@ -86,7 +86,7 @@
       <a name="matrixrows" val="8"/>
     </comp>
     <comp lib="5" loc="(2020,640)" name="RGB Video">
-      <a name="color" val="XTerm16 (4 bit)"/>
+      <a name="color" val="XTerm256 (8 bit)"/>
       <a name="cursor" val="No Cursor"/>
       <a name="height" val="64"/>
       <a name="scale" val="4"/>
@@ -8374,10 +8374,10 @@ a00000 920000 4000002 27*0 200008 8000d 4002008008 4000002
       <a name="bit13" val="2"/>
       <a name="bit14" val="2"/>
       <a name="bit15" val="2"/>
-      <a name="bit16" val="3"/>
-      <a name="bit17" val="3"/>
-      <a name="bit18" val="3"/>
-      <a name="bit19" val="3"/>
+      <a name="bit16" val="2"/>
+      <a name="bit17" val="2"/>
+      <a name="bit18" val="2"/>
+      <a name="bit19" val="2"/>
       <a name="bit2" val="0"/>
       <a name="bit20" val="3"/>
       <a name="bit21" val="3"/>
@@ -8416,7 +8416,7 @@ a00000 920000 4000002 27*0 200008 8000d 4002008008 4000002
       <a name="labelloc" val="east"/>
       <a name="radix" val="16"/>
       <a name="type" val="output"/>
-      <a name="width" val="4"/>
+      <a name="width" val="8"/>
     </comp>
     <comp lib="0" loc="(930,370)" name="Pin">
       <a name="appearance" val="NewPins"/>
@@ -8443,15 +8443,15 @@ a00000 920000 4000002 27*0 200008 8000d 4002008008 4000002
     </comp>
     <comp lib="6" loc="(565,190)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
-      <a name="text" val="8-11 = color"/>
+      <a name="text" val="12-19 = color (8-bit)"/>
     </comp>
     <comp lib="6" loc="(580,155)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
-      <a name="text" val="0-3 = x coordinate"/>
+      <a name="text" val="0-5 = x coordinate"/>
     </comp>
     <comp lib="6" loc="(580,170)" name="Text">
       <a name="font" val="SansSerif plain 12"/>
-      <a name="text" val="4-7 = y coordinate"/>
+      <a name="text" val="6-11 = y coordinate"/>
     </comp>
     <wire from="(600,240)" to="(620,240)"/>
     <wire from="(620,290)" to="(630,290)"/>
