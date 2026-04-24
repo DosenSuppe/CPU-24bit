@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "node16",
         "target": "es2020",
         "lib": ["es2020"],
         "outDir": "out",
@@ -10,7 +10,7 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "moduleResolution": "node",
+        "moduleResolution": "node16",
         "declaration": true,
         "declarationMap": true
     },

@@ -24,6 +24,8 @@ Boot:
     ; Clear screen
     CALL Video.ClearScreen
 
+    CALL Video.PackPixel
+
     ; Draw boot screen
     CALL Video.DrawBootLogo
     CALL Video.DrawMenu

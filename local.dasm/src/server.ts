@@ -17,6 +17,10 @@ import {
     TextDocument
 } from 'vscode-languageserver-textdocument';
 
+import * as fs from 'fs';
+import * as path from 'path';
+import { pathToFileURL, fileURLToPath } from 'url';
+
 // Create a connection for the server, using Node's IPC as a transport.
 const connection = createConnection(ProposedFeatures.all);
 
@@ -70,7 +74,45 @@ connection.onInitialized(() => {
             connection.console.log('Workspace folder change event received.');
         });
     }
+
+    // Scan all .asm/.dasm files in workspace folders on startup
+    if (hasWorkspaceFolderCapability) {
+        connection.workspace.getWorkspaceFolders().then(folders => {
+            if (!folders) return;
+            for (const folder of folders) {
+                const folderPath = fileURLToPath(folder.uri);
+                scanWorkspaceFiles(folderPath);
+            }
+        });
+    }
 });
+
+// Recursively find and parse all .asm/.dasm files in a directory
+function scanWorkspaceFiles(dir: string): void {
+    let entries: fs.Dirent[];
+    try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return;
+    }
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            // Skip node_modules and hidden directories
+            if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+            scanWorkspaceFiles(fullPath);
+        } else if (entry.isFile() && (entry.name.endsWith('.asm') || entry.name.endsWith('.dasm'))) {
+            try {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                const uri = pathToFileURL(fullPath).toString();
+                parseRegisterAnnotations(content, uri);
+                connection.console.log(`Scanned workspace file: ${fullPath}`);
+            } catch {
+                // ignore unreadable files
+            }
+        }
+    }
+}
 
 // Interface for storing label information
 interface LabelInfo {
@@ -181,12 +223,12 @@ connection.onHover((textDocumentPosition: TextDocumentPositionParams): Hover | u
     let end = position.character;
     
     // Move start backwards to find word start
-    while (start > 0 && /[a-zA-Z0-9_]/.test(lineText[start - 1])) {
+    while (start > 0 && /[a-zA-Z0-9_.]/.test(lineText[start - 1])) {
         start--;
     }
     
     // Move end forwards to find word end
-    while (end < lineText.length && /[a-zA-Z0-9_]/.test(lineText[end])) {
+    while (end < lineText.length && /[a-zA-Z0-9_.]/.test(lineText[end])) {
         end++;
     }
     
@@ -201,8 +243,14 @@ connection.onHover((textDocumentPosition: TextDocumentPositionParams): Hover | u
     // Log all stored labels for debugging
     connection.console.log(`Stored labels: ${Array.from(labelStore.keys()).join(', ')}`);
 
-    // Check if this word is a label we have information about
-    const labelInfo = labelStore.get(wordAtPosition);
+    // Check if this word is a label we have information about.
+    // Also handle namespace-qualified references like "Video.PackPixel" by
+    // falling back to the unqualified name after the last dot.
+    let labelInfo = labelStore.get(wordAtPosition);
+    if (!labelInfo && wordAtPosition.includes('.')) {
+        const unqualified = wordAtPosition.substring(wordAtPosition.lastIndexOf('.') + 1);
+        labelInfo = labelStore.get(unqualified);
+    }
     connection.console.log(`Label info found for "${wordAtPosition}": ${labelInfo ? 'yes' : 'no'}`);
     
     if (labelInfo && labelInfo.registers.length > 0) {
