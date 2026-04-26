@@ -8,13 +8,14 @@ Prog:   ; Keeps the CPU running until an interrupt occurs
     JP Prog
 
 .InterruptHandler
-GET_INT_ID REA
 LDI REX, $MemDevice1.Start  ; load address of device 1
 LDI REB, [REX]              ; read value from device 1
-LDI REY, #0x100001
-LDI REZ, #0x100002
-STR REY, REX        ; send "Clear Screen" signal to TTY-Terminal
+
+; 0x100001 = ClearScreen
+; 0x100002 = WriteCharacter
+LDI REZ, #0x100002  ; load memory addresses into registers first. STR [#0x100002], <VALUE> does not currently work for some reason.
 STR REZ, REB        ; send "Write Character" signal to TTY-Terminal
+
 RTI
 
 
