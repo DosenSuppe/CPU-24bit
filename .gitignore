@@ -1,6 +1,7 @@
 *.rom
 *.o
 */bin/*
+bin/*
 *.obj
 
 *.autosave
