@@ -638,17 +638,3 @@ class SystemInstructionCompiler:
         bytecode = opcode | GenerateDestinationRegister(destVal)
         return InstructionResult(bytecode)
     
-    @staticmethod
-    def CompileGetIntData(pOperands: list) -> InstructionResult:
-        """Compile GET_INT_DATA instruction."""
-        if len(pOperands) != 1:
-            raise InstructionError(f"GET_INT_DATA requires 1 operand, got {len(pOperands)}")
-        
-        destType, destVal = pOperands[0]
-        
-        if destType != OperandType.REGISTER:
-            raise InstructionError("GET_INT_DATA operand must be a register")
-        
-        opcode = INSTRUCTION_SET['GET_INT_DATA']
-        bytecode = opcode | GenerateDestinationRegister(destVal)
-        return InstructionResult(bytecode)

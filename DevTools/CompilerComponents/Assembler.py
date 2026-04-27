@@ -366,8 +366,6 @@ class Assembler:
             return SystemInstructionCompiler.CompileSetIVR(pOperands, pSegment, pOffset)
         elif pMnemonic == 'GET_INT_ID':
             return SystemInstructionCompiler.CompileGetIntID(pOperands)
-        elif pMnemonic == 'GET_INT_DATA':
-            return SystemInstructionCompiler.CompileGetIntData(pOperands)
         
         else:
             raise InstructionError(f"Unsupported instruction: {pMnemonic}")

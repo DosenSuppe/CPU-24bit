@@ -51,7 +51,6 @@ INSTRUCTION_SET = {
     'GET_PC': 0x22,
     'SET_IVR': 0x23,
     'GET_INT_ID': 0x24,
-    'GET_INT_DATA': 0x25,
     'RTI': 0xFE,
     'INT': 0xFF,
     'CMP': 0x29,
