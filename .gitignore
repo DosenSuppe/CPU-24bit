@@ -5,6 +5,8 @@
 
 *.autosave
 
+.vscode/
+
 # VS Code Extension Development
 local.dasm/node_modules/
 local.dasm/out/
