@@ -15,7 +15,8 @@ def generateInstruction(pInstruction: list[int] = []):
     # check with the final execution step, since FETCH[0] of the next
     # instruction will correctly restore MAR from PC anyway.
     if pInstruction:
-        return FETCH + pInstruction[:-1] + [pInstruction[-1] | INSTRUCTION_END | INTERRUPT_CHECK]
+        # return FETCH + pInstruction[:-1] + [pInstruction[-1] | INSTRUCTION_END | INTERRUPT_CHECK]
+        return FETCH + pInstruction + [INSTRUCTION_END | INTERRUPT_CHECK]
     else:
         return FETCH + [INSTRUCTION_END | INTERRUPT_CHECK]
 
@@ -206,6 +207,69 @@ instruction_set = [
         'steps': generateInstruction([PC_INCREMENT])
     },
     
+    {   # JP_EQ
+        'name': 'jp_eq', 'op_code': 0x2B, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jp_eq_false', 'op_code': 0x2B, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'jp_eq_addr', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jp_eq_addr_false', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
+    {   # JP_LT
+        'name': 'jp_lt', 'op_code': 0x2D, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jp_lt_false', 'op_code': 0x2D, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'jp_lt_addr', 'op_code': 0x2E, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jp_lt_addr_false', 'op_code': 0x2E, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
+    {   # JP_GT
+        'name': 'call_gt', 'op_code': 0x2F, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'call_gt_false', 'op_code': 0x2F, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'call_gt_addr', 'op_code': 0x30, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'call_gt_addr_false', 'op_code': 0x30, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
     {
         'name': 'call', 'op_code': 0x1A, # call subroutine at address: CALL 0xff0000 or CALL Label
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
@@ -225,6 +289,97 @@ instruction_set = [
             GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
         ])
     },
+    
+    {   # CALL_EQ
+        'name': 'call_eq', 'op_code': 0x25, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            PC_DATA_OUT | PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'call_eq_false', 'op_code': 0x25, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'call_eq_addr', 'op_code': 0x26, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
+        ])
+    },
+    {
+        'name': 'call_eq_addr_false', 'op_code': 0x26, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
+    {   # CALL_LT
+        'name': 'call_lt', 'op_code': 0x27, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            PC_DATA_OUT | PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'call_lt_false', 'op_code': 0x27, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'call_lt_addr', 'op_code': 0x28, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
+        ])
+    },
+    {
+        'name': 'call_lt_addr_false', 'op_code': 0x28, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
+    {   # CALL_GT
+        'name': 'call_gt', 'op_code': 0x29, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            PC_DATA_OUT | PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'call_gt_false', 'op_code': 0x29, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'call_gt_addr', 'op_code': 0x2A, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
+        ])
+    },
+    {
+        'name': 'call_gt_addr_false', 'op_code': 0x2A, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    
     {
         'name': 'rts', 'op_code': 0x1C,
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
@@ -301,54 +456,12 @@ instruction_set = [
             PC_ADDRESS_OUT | INT_READ_ID | GPR_B_WRITE
         ])
     },
-    
-    {
-        'name': 'readdata', 'op_code': 0x25, # reads the interrupt device Data
-        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([
-            PC_ADDRESS_OUT | INT_READ_DATA | GPR_B_WRITE
-        ])
-    },
 
     # compare - sets flags without modifying any register (uses ALU SUB for zero/carry, hardware comparator for L/G/E)
     {
-        'name': 'cmp', 'op_code': 0x29, # compare two registers: CMP REA, REB
+        'name': 'cmp', 'op_code': 0x31, # compare two registers: CMP REA, REB
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([GenerateALUOperation(ALU.SUB) | FR_WRITE | PC_ADDRESS_OUT])
-    },
-
-    # conditional jumps on compare flags
-    {
-        'name': 'cmp_equal_true', 'op_code': 0x26,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
-        'steps': JUMP_INSTRUCTION
-    },
-    {
-        'name': 'cmp_equal_false', 'op_code': 0x26,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
-        'steps': generateInstruction([PC_INCREMENT])
-    },
-
-    {
-        'name': 'cmp_less_true', 'op_code': 0x27,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [1], 'g': [0, 1], 'e': [0, 1]},
-        'steps': JUMP_INSTRUCTION
-    },
-    {
-        'name': 'cmp_less_false', 'op_code': 0x27,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0], 'g': [0, 1], 'e': [0, 1]},
-        'steps': generateInstruction([PC_INCREMENT])
-    },
-
-    {
-        'name': 'cmp_great_true', 'op_code': 0x28,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [1], 'e': [0, 1]},
-        'steps': JUMP_INSTRUCTION
-    },
-    {
-        'name': 'cmp_great_false', 'op_code': 0x28,
-        'flags': {'c': [0], 'z': [0, 1], 'l': [0, 1], 'g': [0], 'e': [0, 1]},
-        'steps': generateInstruction([PC_INCREMENT])
+        'steps': generateInstruction([FR_WRITE | PC_ADDRESS_OUT]) # CMP only loads the two registers value's onto the ALU A- and B-Buses. It will compare automatically then save the flags in the flag register
     },
     
     # interrupt instructions
@@ -401,8 +514,8 @@ def create_instruction_microcode(instruction):
                         flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (gtf << 1) | etf
 
                         for step_index, control_word in enumerate(instruction['steps']):
-                            address = (flag_value << 13) | (instruction['op_code'] << 5) | step_index
-                            
+                            address = (flag_value << 19) | (instruction['op_code'] << 5) | step_index
+                              
                             microcode_steps.append({
                                 'name': instruction['name'],
                                 'address': address,
@@ -432,7 +545,7 @@ def generate_microcode(instruction_set):
 
 def fill_microcode_addresses(microcode):
     
-    MAX_ROM_ADDRESS = (0x1F << 13) | (0xFF << 5) | 0x1F
+    MAX_ROM_ADDRESS = (0x1F << 19) | (0xFF << 5) | 0x1F
     print(f"MAX_ROM_ADDRESS: {MAX_ROM_ADDRESS} (0x{MAX_ROM_ADDRESS:06X})")
     
     final_output = [0] * (MAX_ROM_ADDRESS + 1)
@@ -458,7 +571,7 @@ if __name__ == "__main__":
     pprint(f"Microcode generation complete. Opcodes:\n{instructions}")
     
     try:
-        SaveRom.save_file("machinecode/machinecode.rom", final_rom_data, 32)
+        SaveRom.save_file("machinecode/machinecode.rom", final_rom_data, 40)
         print("ROM data saved successfully.")
     except Exception as e:
         print(f"Failed to save ROM file: {e}")
