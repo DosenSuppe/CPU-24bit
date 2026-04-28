@@ -335,6 +335,10 @@ class Assembler:
         elif pMnemonic in ALU_UNARY_OPERATIONS:
             return ALUInstructionCompiler.CompileUnary(pMnemonic, pOperands)
         
+        # CMP instruction
+        elif pMnemonic == 'CMP':
+            return CMPInstructionCompiler.Compile(pOperands)
+        
         # LDI instruction
         elif pMnemonic == 'LDI':
             return LDIInstructionCompiler.Compile(pOperands, pSegment, pOffset)
