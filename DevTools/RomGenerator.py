@@ -1,4 +1,6 @@
 import sys
+
+from matplotlib.pylab import rint
 import SaveRom as SaveRom
 
 from pprint import pprint
@@ -223,7 +225,7 @@ instruction_set = [
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jp_neq_addr_false', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
+        'name': 'jp_eq_addr_false', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
         'steps': generateInstruction([PC_INCREMENT])
     },
@@ -560,8 +562,8 @@ def create_instruction_microcode(instruction):
     for cf in cf_states:
         for zf in zf_states:
             for ltf in ltf_states:
-                for gtf in gtf_states:
-                    for etf in etf_states:
+                for etf in etf_states:
+                    for gtf in gtf_states:
                         flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (etf << 1) | gtf
 
                         for step_index, control_word in enumerate(instruction['steps']):
