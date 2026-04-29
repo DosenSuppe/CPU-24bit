@@ -223,8 +223,29 @@ instruction_set = [
         'steps': JUMP_ADDR_INSTRUCTION
     },
     {
-        'name': 'jp_eq_addr_false', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
+        'name': 'jp_neq_addr_false', 'op_code': 0x2C, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+
+    {   # JP_NEQ
+        'name': 'jp_neq', 'op_code': 0x32, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': JUMP_INSTRUCTION
+    },
+    {
+        'name': 'jp_neq_false', 'op_code': 0x32, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'jp_neq_addr', 'op_code': 0x33, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': JUMP_ADDR_INSTRUCTION
+    },
+    {
+        'name': 'jp_neq_addr_false', 'op_code': 0x33, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     
@@ -317,6 +338,36 @@ instruction_set = [
     {
         'name': 'call_eq_addr_false', 'op_code': 0x26, # call subroutine at indirect address: CALL REA or CALL REX
         'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+
+    {   # CALL_NEQ
+        'name': 'call_neq', 'op_code': 0x34, # call subroutine at address: CALL 0xff0000 or CALL Label
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            PC_DATA_OUT | PC_ADDRESS_OUT | MAR_WRITE,
+            RAM_READ | PC_WRITE | PC_ADDRESS_OUT | PC_INCREMENT
+        ])
+    },
+    {
+        'name': 'call_neq_false', 'op_code': 0x34, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
+        'steps': generateInstruction([PC_INCREMENT])
+    },
+    {
+        'name': 'call_neq_addr', 'op_code': 0x35, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [0]},
+        'steps': generateInstruction([
+            SP_ADDRESS_OUT | MAR_WRITE,
+            RAM_WRITE | PC_DATA_OUT | SP_DECREMENT,
+            GPR_ADDRESS_OUT | MAR_WRITE | GPR_DATA_OUT | PC_WRITE,
+        ])
+    },
+    {
+        'name': 'call_neq_addr_false', 'op_code': 0x35, # call subroutine at indirect address: CALL REA or CALL REX
+        'flags': {'c': [0, 1], 'z': [0, 1], 'l': [0, 1], 'g': [0, 1], 'e': [1]},
         'steps': generateInstruction([PC_INCREMENT])
     },
     

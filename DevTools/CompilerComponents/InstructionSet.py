@@ -55,9 +55,11 @@ INSTRUCTION_SET = {
     'CALL_EQ': [0x25, 0x26],
     'CALL_LT': [0x27, 0x28],
     'CALL_GT': [0x29, 0x2A],
+    'CALL_NEQ': [0x34, 0x35],
     'JP_EQ': [0x2B, 0x2C],
     'JP_LT': [0x2D, 0x2E],
     'JP_GT': [0x2F, 0x30],
+    'JP_NEQ': [0x32, 0x33],
     
     'CMP': 0x31,   
     
@@ -69,5 +71,5 @@ INSTRUCTION_SET = {
 SIMPLE_INSTRUCTIONS = {'NOP', 'HALT', 'RTS', 'RTI', 'INT'}
 ALU_BINARY_OPERATIONS = {'ADD', 'SUB', 'MUL', 'DIV', 'SHL', 'SHR', 'NAND', 'AND', 'OR', 'XOR', 'NOR'}
 ALU_UNARY_OPERATIONS = {'NOT'}
-CONTROL_FLOW_INSTRUCTIONS = {'JP', 'JPZ', 'JPC', 'CALL', 'CALL_EQ', 'CALL_LT', 'CALL_GT', 'JP_EQ', 'JP_LT', 'JP_GT'}
+CONTROL_FLOW_INSTRUCTIONS = {'JP', 'JPZ', 'JPC', 'CALL', 'CALL_EQ', 'CALL_LT', 'CALL_GT', 'JP_EQ', 'JP_LT', 'JP_GT', 'JP_NEQ', 'CALL_NEQ'}
 STACK_INSTRUCTIONS = {'PUSH', 'POP'}
