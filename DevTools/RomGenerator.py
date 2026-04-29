@@ -511,7 +511,7 @@ def create_instruction_microcode(instruction):
             for ltf in ltf_states:
                 for gtf in gtf_states:
                     for etf in etf_states:
-                        flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (gtf << 1) | etf
+                        flag_value = (cf << 4) | (zf << 3) | (ltf << 2) | (etf << 1) | gtf
 
                         for step_index, control_word in enumerate(instruction['steps']):
                             address = (flag_value << 19) | (instruction['op_code'] << 5) | step_index
