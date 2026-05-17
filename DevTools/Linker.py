@@ -104,6 +104,8 @@ class RelocatableObject:
         self.imports: List[str] = []
         self.declarations: Dict[str, str] = {}
         self.import_aliases: Dict[str, str] = {}  # imported file -> AS-alias (if any)
+        self.namespace: str = ""              # set by load_object; used to qualify labels
+        self.placement_offsets: Dict[str, int] = {}  # segment -> offset within segment where this obj's bytecode lands
 
     @staticmethod
     def from_dict(data: dict) -> 'RelocatableObject':
@@ -147,10 +149,11 @@ class Linker:
             namespace = base_filename.replace('.obj', '').replace('.asm', '')  # Preserve case
         else:
             namespace = namespace  # Preserve case
-        
+        obj.namespace = namespace
+
         # Store the object BEFORE processing imports to prevent recursive overwrites
         self.loaded_objects[normalized_path] = obj
-        
+
         # Recursively load imports
         for import_file in obj.imports:
             # Check if it's a .asm file and convert to .obj
@@ -190,19 +193,10 @@ class Linker:
                 import_base = os.path.basename(import_file).replace('.asm', '').replace('.obj', '')  # Preserve case
             self.load_object(import_path, import_base, namespace)
         
-        # Register labels with namespace
-        for label_name, (segment, offset) in obj.labels.items():
-            # Calculate absolute address
-            segment_base = self.mem_config.get_segment_address(segment)
-            absolute_addr = segment_base + offset
-            
-            # Register with namespace
-            qualified_name = f"{namespace}.{label_name}"
-            self.global_labels[qualified_name] = absolute_addr
-            
-            # Also register without namespace for local references within same file
-            self.global_labels[label_name] = absolute_addr
-        
+        # Label registration is deferred to link() — we need placement offsets
+        # computed across all loaded objects before we can know absolute addresses.
+        # See _compute_placements() and _register_labels().
+
         # Collect declarations
         for var_name, expression in obj.declarations.items():
             # Register with namespace
@@ -247,6 +241,50 @@ class Linker:
         except Exception as e:
             raise ValueError(f"Failed to evaluate expression '{expression}': {e}")
     
+    def _compute_placements(self):
+        """Assign each loaded object a per-segment placement offset.
+
+        When multiple objects contribute to the same segment (e.g. several C
+        files each emitting .CCode), they are laid out contiguously: the first
+        starts at offset 0, the next at offset = len(first), and so on. Without
+        this, every object's segment would be placed at segment_base + 0 and
+        they would overwrite each other.
+        """
+        cursors: Dict[str, int] = {}
+        for obj_file, obj in self.loaded_objects.items():
+            obj.placement_offsets = {}
+            for segment_name, bytecode in obj.segments.items():
+                placement = cursors.get(segment_name, 0)
+                obj.placement_offsets[segment_name] = placement
+                new_cursor = placement + len(bytecode)
+
+                segment_size = self.mem_config.get_segment_size(segment_name)
+                if new_cursor > segment_size:
+                    raise MemoryError(
+                        f"Segment '{segment_name}' overflow: placing "
+                        f"'{obj_file}' would push usage to {new_cursor} words "
+                        f"(segment size is {segment_size})")
+                cursors[segment_name] = new_cursor
+
+    def _register_labels(self):
+        """Register every label with a placement-aware absolute address.
+
+        Each label is registered both qualified (namespace.label) and
+        unqualified. Unqualified entries may be overwritten when multiple
+        objects define the same compiler-internal name (e.g. __cc_str_0);
+        relocations within an object prefer the object's own definition,
+        so that collision is handled in _resolve_single_relocation.
+        """
+        for obj_file, obj in self.loaded_objects.items():
+            for label_name, (segment, offset) in obj.labels.items():
+                segment_base = self.mem_config.get_segment_address(segment)
+                placement = obj.placement_offsets.get(segment, 0)
+                absolute_addr = segment_base + placement + offset
+
+                qualified_name = f"{obj.namespace}.{label_name}"
+                self.global_labels[qualified_name] = absolute_addr
+                self.global_labels[label_name] = absolute_addr
+
     def _resolve_declarations(self):
         """Resolve all declared variables and add them to global_labels."""
         print(f"Resolving {len(self.declared_variables)} declared variables...")
@@ -266,22 +304,22 @@ class Linker:
         reloc_tasks = []
         for obj_file, obj in self.loaded_objects.items():
             for reloc in obj.relocations:
-                reloc_tasks.append((obj_file, reloc))
-        
+                reloc_tasks.append((obj_file, obj, reloc))
+
         print(f"  {len(reloc_tasks)} relocations to resolve")
-        
+
         if not reloc_tasks:
             return
-        
+
         # Resolve relocations in parallel
         num_workers = min(8, len(reloc_tasks))  # Use up to 8 threads, but not more than relocations
-        
+
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             futures = {}
-            for obj_file, reloc in reloc_tasks:
-                future = executor.submit(self._resolve_single_relocation, reloc)
+            for obj_file, obj, reloc in reloc_tasks:
+                future = executor.submit(self._resolve_single_relocation, obj, reloc)
                 futures[future] = (obj_file, reloc)
-            
+
             # Collect results and patch memory atomically
             for i, future in enumerate(as_completed(futures)):
                 try:
@@ -294,22 +332,23 @@ class Linker:
                 if (i + 1) % 100 == 0:
                     print(f"  Resolved {i + 1}/{len(reloc_tasks)} relocations")
     
-    def _resolve_single_relocation(self, reloc: Dict) -> Tuple[int, int]:
+    def _resolve_single_relocation(self, obj: 'RelocatableObject', reloc: Dict) -> Tuple[int, int]:
         """Resolve a single relocation and return (address, value) pair.
-        
-        This is thread-safe as it only reads from mem_config and global_labels.
+
+        Thread-safe: only reads from mem_config, global_labels, and the obj.
         """
         segment = reloc['segment']
         offset = reloc['offset']
         symbol = reloc['symbol']
-        
-        # Calculate absolute position in memory
+
+        # Calculate absolute position in memory, biased by this obj's placement.
         segment_base = self.mem_config.get_segment_address(segment)
-        abs_position = segment_base + offset
-        
+        placement = obj.placement_offsets.get(segment, 0)
+        abs_position = segment_base + placement + offset
+
         # Resolve symbol
         target_address = None
-        
+
         # Check if it's a memory config symbol (marked with $MEM$ prefix)
         if symbol.startswith("$MEM$"):
             # Extract the actual memory config symbol name
@@ -318,52 +357,65 @@ class Linker:
                 target_address = self.mem_config.memory_symbols[mem_symbol]
             else:
                 raise ValueError(f"Undefined memory config symbol: {mem_symbol}")
+        elif symbol in obj.labels:
+            # Prefer the obj's own label definition. Handles compiler-internal
+            # name collisions (e.g. __cc_str_0 emitted by every C file) where
+            # the unqualified entry in global_labels would otherwise point at
+            # whichever object happened to register it last.
+            sym_segment, sym_offset = obj.labels[symbol]
+            sym_segment_base = self.mem_config.get_segment_address(sym_segment)
+            sym_placement = obj.placement_offsets.get(sym_segment, 0)
+            target_address = sym_segment_base + sym_placement + sym_offset
         elif symbol in self.global_labels:
-            # Regular symbol
             target_address = self.global_labels[symbol]
         else:
             raise ValueError(f"Undefined symbol: {symbol}")
-        
+
         return abs_position, target_address
     
     def link(self, main_obj_file: str) -> Dict[int, int]:
         print(f"Loading main object file: {main_obj_file}")
         main_obj = self.load_object(main_obj_file)
-        
+
+        # Compute per-segment placement offsets BEFORE registering labels, so
+        # that multiple objects contributing to the same segment (e.g. several
+        # C files all emitting .CCode) get laid out contiguously instead of
+        # overwriting each other at segment_base + 0.
+        self._compute_placements()
+        self._register_labels()
+
         # Resolve declared variables after loading all objects
         self._resolve_declarations()
-        
-        # Note: Memory configuration symbols are kept separate and only used for 
+
+        # Note: Memory configuration symbols are kept separate and only used for
         # relocations that have the $ prefix (handled during compilation)
-        
+
         # Fixed size for 24-bit addressing (2^24 cells)
         MEMORY_SIZE = 1 << 24
         print(f"Initializing sparse memory image (max {MEMORY_SIZE:,} words)...")
         self.memory_image = {}  # Only store non-zero values
-        
-        # Place all segments from all loaded objects
+
+        # Place all segments from all loaded objects at their assigned offsets.
         for obj_file, obj in self.loaded_objects.items():
             for segment_name, bytecode in obj.segments.items():
                 segment_base = self.mem_config.get_segment_address(segment_name)
-                segment_size = self.mem_config.get_segment_size(segment_name)
-                
-                # Check if segment fits
-                if len(bytecode) > segment_size:
-                    raise MemoryError(f"Segment '{segment_name}' in '{obj_file}' exceeds configured size")
-                
-                # Check if segment is within memory bounds
-                if segment_base + len(bytecode) > MEMORY_SIZE:
-                    raise MemoryError(f"Segment '{segment_name}' in '{obj_file}' exceeds memory bounds")
-                
+                placement = obj.placement_offsets.get(segment_name, 0)
+                base_addr = segment_base + placement
+
+                # Bounds check against linear memory (segment-size bounds were
+                # already checked during _compute_placements).
+                if base_addr + len(bytecode) > MEMORY_SIZE:
+                    raise MemoryError(
+                        f"Segment '{segment_name}' in '{obj_file}' exceeds memory bounds")
+
                 # Copy bytecode to memory image
                 for i, word in enumerate(bytecode):
-                    addr = segment_base + i
                     if word != 0:  # Only store non-zero values
-                        self.memory_image[addr] = word
-        
+                        self.memory_image[base_addr + i] = word
+
         # Resolve all relocations using threading
         self._resolve_relocations_threaded()
-        
+
         return self.memory_image
     
     def write_output(self, output_file: str):
