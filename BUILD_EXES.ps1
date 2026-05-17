@@ -7,11 +7,18 @@ Write-Host ""
 Write-Host "Building EXE files..."
 Push-Location "$PSScriptRoot/DevTools"
 
-$tools = @("Compiler", "ImageConverter", "Linker", "RomGenerator")
+# Source file -> output exe name. Source on the left, output (without .exe) on the right.
+$tools = @(
+    @{ Source = "Compiler";       Output = "dasm" },
+    @{ Source = "ImageConverter"; Output = "ImageConverter" },
+    @{ Source = "Linker";         Output = "dasm-linker" },
+    @{ Source = "RomGenerator";   Output = "RomGenerator" },
+    @{ Source = "CCompiler";      Output = "dasm-cc" }
+)
 
 foreach ($tool in $tools) {
-    Write-Host "Building $tool.exe..."
-    pyinstaller --onefile --name $tool --distpath ../bin "$tool.py" 2>&1 | Out-Null
+    Write-Host "Building $($tool.Output).exe..."
+    pyinstaller --onefile --name $tool.Output --distpath ../bin "$($tool.Source).py" 2>&1 | Out-Null
 }
 
 Write-Host ""
