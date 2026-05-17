@@ -90,7 +90,8 @@ class Assembler:
                 )
                 if match:
                     import_file = match.group(2)
-                    pRelocatableObject.AddImport(import_file)
+                    alias = match.group(3)
+                    pRelocatableObject.AddImport(import_file, alias)
             
             elif cleanLine.upper().startswith('!DECLARE'):
                 # Parse: !DECLARE VariableName = expression

@@ -32,6 +32,7 @@ class RelocatableObject:
         self.relocations: List[Dict[str, Any]] = []
         self.imports: List[str] = []
         self.declarations: Dict[str, str] = {}  # Variable name -> expression string
+        self.import_aliases: Dict[str, str] = {}  # imported file -> AS-alias (if any)
     
     def AddLabel(self, pLabelName: str, pSegment: str, pOffset: int) -> None:
         """
@@ -62,15 +63,20 @@ class RelocatableObject:
             'symbol': pSymbol
         })
     
-    def AddImport(self, pImportFile: str) -> None:
+    def AddImport(self, pImportFile: str, pAlias: str = None) -> None:
         """
         Add an import dependency.
-        
+
         Args:
-            pImportFile: Filename being imported
+            pImportFile: Filename being imported.
+            pAlias:      Optional namespace alias from `!IMPORT "..." AS Alias`.
+                         When set, the linker uses this as the namespace for
+                         that file's labels instead of the filename-derived one.
         """
         if pImportFile not in self.imports:
             self.imports.append(pImportFile)
+        if pAlias:
+            self.import_aliases[pImportFile] = pAlias
     
     def AddDeclaration(self, pVariableName: str, pExpression: str) -> None:
         """
@@ -133,7 +139,8 @@ class RelocatableObject:
             'labels': self.labels,
             'relocations': self.relocations,
             'imports': self.imports,
-            'declarations': self.declarations
+            'declarations': self.declarations,
+            'import_aliases': self.import_aliases,
         }
     
     @staticmethod
@@ -153,6 +160,7 @@ class RelocatableObject:
         obj.relocations = data['relocations']
         obj.imports = data['imports']
         obj.declarations = data.get('declarations', {})  # Support older files without declarations
+        obj.import_aliases = data.get('import_aliases', {})  # Older files may not have this field
         return obj
     
     def __repr__(self) -> str:

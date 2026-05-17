@@ -103,7 +103,8 @@ class RelocatableObject:
         self.relocations: List[Dict] = []
         self.imports: List[str] = []
         self.declarations: Dict[str, str] = {}
-    
+        self.import_aliases: Dict[str, str] = {}  # imported file -> AS-alias (if any)
+
     @staticmethod
     def from_dict(data: dict) -> 'RelocatableObject':
         obj = RelocatableObject(data['filename'])
@@ -112,6 +113,7 @@ class RelocatableObject:
         obj.relocations = data['relocations']
         obj.imports = data['imports']
         obj.declarations = data.get('declarations', {})
+        obj.import_aliases = data.get('import_aliases', {})  # older .obj files lack this
         return obj
 
 
@@ -180,9 +182,12 @@ class Linker:
             
             if import_path is None:
                 raise FileNotFoundError(f"Could not find import file: {import_obj_file}. Tried paths: {possible_paths}")
-            
-            # Import files don't get a namespace override unless explicitly specified
-            import_base = os.path.basename(import_file).replace('.asm', '').replace('.obj', '')  # Preserve case
+
+            alias = obj.import_aliases.get(import_file)
+            if alias:
+                import_base = alias
+            else:
+                import_base = os.path.basename(import_file).replace('.asm', '').replace('.obj', '')  # Preserve case
             self.load_object(import_path, import_base, namespace)
         
         # Register labels with namespace
