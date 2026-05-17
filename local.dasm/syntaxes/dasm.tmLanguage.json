@@ -6,6 +6,9 @@
             "include": "#comments"
         },
         {
+            "include": "#label-annotations"
+        },
+        {
             "include": "#register-annotations"
         },
         {
@@ -142,9 +145,9 @@
         "directives": {
             "patterns": [
                 {
-                    "comment": "Matches the !DECLARE directive with variable assignment.",
+                    "comment": "Matches the !DECLARE / !DEFINE directive with variable assignment.",
                     "name": "meta.directive.declare.dasm",
-                    "match": "(!\\b(DECLARE|declare)\\b)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(=)\\s*([^;\\n\\r]+)",
+                    "match": "(!\\b(DECLARE|declare|DEFINE|define)\\b)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(=)\\s*([^;\\n\\r]+)",
                     "captures": {
                         "1": {
                             "name": "keyword.other.directive.declare.dasm"
@@ -213,8 +216,20 @@
                     "name": "string.unquoted.description.dasm"
                 }
             }
+        },
+        "label-annotations": {
+            "name": "meta.label-annotation.dasm",
+            "match": "^\\s*@(description|desc|returns|return|deprecated|wip)\\b\\s*:?\\s*(.*?)\\s*$",
+            "captures": {
+                "1": {
+                    "name": "keyword.other.annotation.dasm"
+                },
+                "2": {
+                    "name": "string.unquoted.description.dasm"
+                }
+            }
         }
-        
+
     },
     "scopeName": "source.dasm"
 }
