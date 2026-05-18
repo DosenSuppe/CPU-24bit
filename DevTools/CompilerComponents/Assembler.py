@@ -13,6 +13,11 @@ from CompilerComponents.InstructionCompiler import (
     CMPInstructionCompiler,
     LDIInstructionCompiler,
     STRInstructionCompiler,
+    LDR_LOCInstructionCompiler,
+    STR_LOCInstructionCompiler,
+    LDR_ARGInstructionCompiler,
+    STR_ARGInstructionCompiler,
+    SET_SP_RInstructionCompiler,
     ControlFlowInstructionCompiler,
     StackInstructionCompiler,
     SystemInstructionCompiler
@@ -347,7 +352,19 @@ class Assembler:
         # STR instruction
         elif pMnemonic == 'STR':
             return STRInstructionCompiler.Compile(pOperands, pSegment, pOffset)
-        
+
+        # Frame-pointer-relative load/store (locals at FP-N, args at FP+N)
+        elif pMnemonic == 'LDR_LOC':
+            return LDR_LOCInstructionCompiler.Compile(pOperands, pSegment, pOffset)
+        elif pMnemonic == 'STR_LOC':
+            return STR_LOCInstructionCompiler.Compile(pOperands, pSegment, pOffset)
+        elif pMnemonic == 'LDR_ARG':
+            return LDR_ARGInstructionCompiler.Compile(pOperands, pSegment, pOffset)
+        elif pMnemonic == 'STR_ARG':
+            return STR_ARGInstructionCompiler.Compile(pOperands, pSegment, pOffset)
+        elif pMnemonic == 'SET_SP_R':
+            return SET_SP_RInstructionCompiler.Compile(pOperands, pSegment, pOffset)
+
         # Control flow instructions
         elif pMnemonic in CONTROL_FLOW_INSTRUCTIONS:
             return ControlFlowInstructionCompiler.Compile(

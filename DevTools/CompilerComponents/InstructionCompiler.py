@@ -213,6 +213,181 @@ class CMPInstructionCompiler:
         
         return InstructionResult(bytecode)
 
+class LDR_LOCInstructionCompiler:
+    """Compiler for LDR_LOC: load a register from a local frame slot at [FP - imm]."""
+
+    @staticmethod
+    def Compile(operands: list, segment: str, offset: int) -> InstructionResult:
+        """
+        Compile for LDR_LOC (Load from Local).
+
+        Supports:
+        - LDR_LOC REA, #0x1 (immediate)
+
+        Args:
+            operands: List of parsed operands
+            segment: Current segment name
+            offset: Current offset in segment
+            
+        Returns:
+            InstructionResult with encoded instruction
+        """
+        if (len(operands) != 2):
+            raise InstructionError(f"LDR_LOC requires 2 operands, got {len(operands)}")
+
+        destType, destVal = operands[0]
+        srcType, srcVal = operands[1]
+        
+        if (destType != OperandType.REGISTER):
+            raise InstructionError("LDR_LOC destination must be a register")
+
+        if (srcType != OperandType.IMMEDIATE):
+            raise InstructionError("LDR_LOC source must be an immediate")
+
+        opcode = INSTRUCTION_SET['LDR_LOC']
+        bytecode = opcode | GenerateDestinationRegister(destVal)
+        return InstructionResult(bytecode, pExtraWord=srcVal)
+
+class LDR_ARGInstructionCompiler:
+    """Compiler for LDR_ARG: load a register from an argument slot at [FP + imm]."""
+
+    @staticmethod
+    def Compile(operands: list, segment: str, offset: int) -> InstructionResult:
+        """
+        Compile for LDR_ARG (Load from argument slot).
+
+        Supports:
+        - LDR_ARG REA, #0x1 (immediate)
+
+        Args:
+            operands: List of parsed operands
+            segment: Current segment name
+            offset: Current offset in segment
+            
+        Returns:
+            InstructionResult with encoded instruction
+        """
+        if (len(operands) != 2):
+            raise InstructionError(f"LDR_ARG requires 2 operands, got {len(operands)}")
+
+        destType, destVal = operands[0]
+        srcType, srcVal = operands[1]
+        
+        if (destType != OperandType.REGISTER):
+            raise InstructionError("LDR_ARG destination must be a register")
+
+        if (srcType != OperandType.IMMEDIATE):
+            raise InstructionError("LDR_ARG source must be an immediate")
+
+        opcode = INSTRUCTION_SET['LDR_ARG']
+        bytecode = opcode | GenerateDestinationRegister(destVal)
+        return InstructionResult(bytecode, pExtraWord=srcVal)
+
+class STR_LOCInstructionCompiler:
+    """Compiler for STR_LOC: store a register to a local frame slot at [FP - imm]."""
+
+    @staticmethod
+    def Compile(operands: list, segment: str, offset: int) -> InstructionResult:
+        """
+        Compile STR_LOC instruction.
+
+        Supports:
+        - STR_LOC REA, #0x1 (register source, immediate offset)
+
+        Args:
+            operands: List of parsed operands
+            segment: Current segment name
+            offset: Current offset in segment
+
+        Returns:
+            InstructionResult with encoded instruction
+        """
+        if len(operands) != 2:
+            raise InstructionError(f"STR_LOC requires 2 operands, got {len(operands)}")
+
+        srcType, srcVal = operands[0]
+        immType, immVal = operands[1]
+
+        if srcType != OperandType.REGISTER:
+            raise InstructionError("STR_LOC source must be a register")
+
+        if immType != OperandType.IMMEDIATE:
+            raise InstructionError("STR_LOC offset must be an immediate")
+
+        opcode = INSTRUCTION_SET['STR_LOC']
+        bytecode = opcode | GenerateSourceRegister(srcVal)
+        return InstructionResult(bytecode, pExtraWord=immVal)
+
+
+class STR_ARGInstructionCompiler:
+    """Compiler for STR_ARG: store a register to an argument slot at [FP + imm]."""
+
+    @staticmethod
+    def Compile(operands: list, segment: str, offset: int) -> InstructionResult:
+        """
+        Compile STR_ARG instruction.
+
+        Supports:
+        - STR_ARG REA, #0x1 (register source, immediate offset)
+
+        Args:
+            operands: List of parsed operands
+            segment: Current segment name
+            offset: Current offset in segment
+
+        Returns:
+            InstructionResult with encoded instruction
+        """
+        if len(operands) != 2:
+            raise InstructionError(f"STR_ARG requires 2 operands, got {len(operands)}")
+
+        srcType, srcVal = operands[0]
+        immType, immVal = operands[1]
+
+        if srcType != OperandType.REGISTER:
+            raise InstructionError("STR_ARG source must be a register")
+
+        if immType != OperandType.IMMEDIATE:
+            raise InstructionError("STR_ARG offset must be an immediate")
+
+        opcode = INSTRUCTION_SET['STR_ARG']
+        bytecode = opcode | GenerateSourceRegister(srcVal)
+        return InstructionResult(bytecode, pExtraWord=immVal)
+
+
+class SET_SP_RInstructionCompiler:
+    """Compiler for SET_SP_R: copy a register's value into the stack pointer."""
+
+    @staticmethod
+    def Compile(operands: list, segment: str, offset: int) -> InstructionResult:
+        """
+        Compile SET_SP_R instruction.
+
+        Supports:
+        - SET_SP_R REX (register source — SP becomes the value of that register)
+
+        Single-word instruction. Used by the C codegen's function epilogue to
+        deallocate the entire local frame in one step via SET_SP_R FP.
+
+        Args:
+            operands: List of parsed operands
+            segment: Current segment name (unused)
+            offset: Current offset in segment (unused)
+
+        Returns:
+            InstructionResult with encoded instruction
+        """
+        if len(operands) != 1:
+            raise InstructionError(f"SET_SP_R requires 1 operand, got {len(operands)}")
+
+        srcType, srcVal = operands[0]
+        if srcType != OperandType.REGISTER:
+            raise InstructionError("SET_SP_R operand must be a register")
+
+        opcode = INSTRUCTION_SET['SET_SP_R']
+        bytecode = opcode | GenerateSourceRegister(srcVal)
+        return InstructionResult(bytecode)
+
 
 class LDIInstructionCompiler:
     """Compiler for LDI (Load Immediate) instruction."""

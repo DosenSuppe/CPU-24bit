@@ -228,9 +228,13 @@ class CodeGen:
 
     def _EmitEpilogue(self) -> None:
         e = self.emitter
-        # Release locals (one POP each)
-        for _ in range(self._current_func.frame_size):
-            e.Instr("POP", CC.SCRATCH_C, pComment="release local")
+        # Deallocate the entire local frame in one instruction by snapping
+        # SP back to FP. This works because the prologue did `GET_SP FP`
+        # AFTER `PUSH REX`, so FP points at the saved-FP slot's neighbor —
+        # exactly where SP was sitting before any PUSH #0 reservations ran.
+        if self._current_func.frame_size > 0:
+            e.Instr("SET_SP_R", CC.FP_REG,
+                    pComment=f"SP = FP (release {self._current_func.frame_size} local word(s))")
         # Restore old FP
         e.Instr("POP", CC.FP_REG, pComment="restore FP")
         e.Instr("RTS")
@@ -662,12 +666,23 @@ class CodeGen:
             else:
                 raise CCodeGenError(f"Compound op '{op}' not supported")
 
-        # Compute address of target. For Ident targets, the helper writes
-        # directly into REY without touching REA, so we don't need to stash
-        # the value. For Index / *p, we must stash because computing the
-        # address itself clobbers REA.
+        # Commit the value (currently in REA) to the target. For scalar
+        # locals and params, STR_LOC / STR_ARG do it in a single instruction.
+        # For globals and complex lvalues, fall back to "compute address into
+        # REY, then STR".
         target = pExpr.target
         if isinstance(target, Ident):
+            local = self._current_func.symbols.get(target.name)
+            if local is not None and not local.ctype.IsArray():
+                if local.is_param:
+                    offset = CC.ARG_BASE_OFFSET + local.slot
+                    e.Instr("STR_ARG", CC.ACC_REG, self._Imm(offset),
+                            pComment=f"{target.name} = value")
+                else:
+                    e.Instr("STR_LOC", CC.ACC_REG, self._Imm(local.slot),
+                            pComment=f"{target.name} = value")
+                return
+            # Global, or local array — keep the general address-compute path.
             self._AddressOfIdentInto(CC.ADDR_REG_A, target.name)
             e.Instr("STR", CC.ADDR_REG_A, CC.ACC_REG, pComment="*target = value")
             return
@@ -805,9 +820,12 @@ class CodeGen:
                 # Array name decays to pointer to element 0
                 self._AddressOfIdentInto(CC.ACC_REG, pName)
                 return
-            # Compute address directly into REY, then dereference into REA.
-            self._AddressOfIdentInto(CC.ADDR_REG_A, pName)
-            e.Instr("LDI", CC.ACC_REG, f"[{CC.ADDR_REG_A}]", pComment=pName)
+            # Scalar local or param: single-instruction FP-relative load.
+            if local.is_param:
+                offset = CC.ARG_BASE_OFFSET + local.slot
+                e.Instr("LDR_ARG", CC.ACC_REG, self._Imm(offset), pComment=pName)
+            else:
+                e.Instr("LDR_LOC", CC.ACC_REG, self._Imm(local.slot), pComment=pName)
             return
         if pName in self.analyzer.globals:
             g = self.analyzer.globals[pName]
@@ -857,15 +875,12 @@ class CodeGen:
         """Store REA into a scalar local at frame slot `pSlot`.
 
         Grow-down post-decrement stack: scalar at slot S sits at FP - S.
+        Single-instruction emission via STR_LOC.
         """
         if pSize != 1:
             raise CCodeGenError(f"Multi-word local stores not supported (size={pSize})")
-        e = self.emitter
-        offset = pSlot
-        e.Instr("MOV", CC.ADDR_REG_A, CC.FP_REG)
-        e.Instr("LDI", CC.ADDR_REG_B, self._Imm(offset) if offset != 0 else "#0")
-        e.Instr("SUB", CC.ADDR_REG_A, CC.ADDR_REG_B, pComment="&local")
-        e.Instr("STR", CC.ADDR_REG_A, CC.ACC_REG, pComment="*local = REA")
+        self.emitter.Instr("STR_LOC", CC.ACC_REG, self._Imm(pSlot),
+                           pComment="*local = REA")
 
     # ------------------------------------------------------------------
     # Misc

@@ -5,11 +5,12 @@
 // collide at link time).
 //
 // After HALT:
-//   REA      = 145              (sum of all four results)
-//   r_add    = 7
-//   r_fib    = 55
-//   r_lsum   = 55
-//   r_array  = 28
+//   REA        = 172              (sum of all four results)
+//   r_add      = 7
+//   r_fib      = 55
+//   r_lsum     = 55
+//   r_array    = 28
+//   r_loc_arg  = 27
 //
 // Inspect r_* in .CData memory (mem.cfg places it at 0x008000) to see each
 // test's individual result.
@@ -18,6 +19,7 @@ int r_add;
 int r_fib;
 int r_lsum;
 int r_array;
+int r_loc_arg;
 
 int add(int a, int b) {
     return a + b;
@@ -63,10 +65,25 @@ int array_test(void) {
     return total;
 }
 
+int touch_arg(int p) {
+    p = p + 1;
+    return p;
+}
+
+int loc_arg(void) {
+    int a = 5;
+    int b = 7;
+    a = a + b;
+    b += a;
+    return touch_arg(a) + b - 5;
+}
+
+
 int main(void) {
     r_add   = add(3, 4);
     r_fib   = fib(10);
     r_lsum  = loop_sum(10);
     r_array = array_test();
-    return r_add + r_fib + r_lsum + r_array;
+    r_loc_arg = loc_arg();
+    return r_add + r_fib + r_lsum + r_array + r_loc_arg;
 }

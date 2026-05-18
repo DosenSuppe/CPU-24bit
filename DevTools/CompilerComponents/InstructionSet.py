@@ -61,6 +61,17 @@ INSTRUCTION_SET = {
     'JP_GT': [0x2F, 0x30],
     'JP_NEQ': [0x32, 0x33],
     
+    'LDR_LOC': 0x36,
+    'STR_LOC': 0x37,
+    'LDR_ARG': 0x38,
+    'STR_ARG': 0x39,
+
+    # TODO
+    # 'ADDR_LOC': 0x3A,
+    # 'ADDR_ARG': 0x3B,
+
+    'SET_SP_R': 0x3C,
+    
     'CMP': 0x31,   
     
     'RTI': 0xFE,
