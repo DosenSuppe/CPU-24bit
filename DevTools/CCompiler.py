@@ -1,25 +1,32 @@
 """
 C-to-DASM compiler for the 24-bit CPU.
 
-Compiles a C subset (int/char/pointers/arrays/functions/if/while/return,
-inline asm, syscall builtin) to DASM assembly that can be fed to Compiler.py
-and then linked with Linker.py.
+Compiles a C subset (int/char/pointers/arrays/structs/functions/if/while/for/
+return, inline asm, syscall builtin) to DASM assembly that can be fed to
+Compiler.py and then linked with Linker.py.
 
 Usage:
-    python cc.py <input.c> [-o <output.asm>] [--no-entry]
+    python cc.py <input.c> [-o <output.asm>] [--no-entry] [--import <obj>]...
 
 Flags:
-    -o <path>    Output path (default: <input>.asm)
-    --no-entry   Suppress the .Kernel boot stub. Use when the file is meant
-                 to be linked as a library — i.e., something else is providing
-                 the entry point. Without this flag, any file defining `main`
-                 emits a .Kernel segment with SET_SP/SET_IVR/CALL main/HALT,
-                 which collides if multiple such objects are linked together.
+    -o <path>          Output path (default: <input>.asm).
+    --no-entry         Suppress the .Kernel boot stub. Use when the file is
+                       meant to be linked as a library — i.e., something else
+                       is providing the entry point. Without this flag, any
+                       file defining `main` emits a .Kernel segment with
+                       SET_SP/SET_IVR/CALL main/HALT, which collides if
+                       multiple such objects are linked together.
+    --import <path>    Declare a dependency on another .obj. Emits a
+                       `!IMPORT "<path>"` directive at the top of the output
+                       so the linker pulls in that object automatically.
+                       Repeat for multiple dependencies. Paths are resolved
+                       by the linker relative to the main .obj's directory.
 
 Example:
-    python cc.py examples/add.c -o examples/add.asm
-    python Compiler.py examples/add.asm
-    python Linker.py bin/examples/add.obj mem.cfg add.o
+    python cc.py heap.c --no-entry
+    python cc.py test_heap.c --import "heap.obj" --import "_heap_start.obj"
+    python Compiler.py test_heap.asm
+    python Linker.py bin/test_heap.obj mem.cfg test_heap.o
 """
 
 import os
@@ -33,8 +40,14 @@ from CCompilerComponents.CodeGen import CodeGen
 from CCompilerComponents.Exceptions import CCompileError
 
 
-def CompileFile(pInputPath: str, pOutputPath: str = None, pNoEntry: bool = False) -> str:
-    """Compile a C source file to DASM. Returns the output path written."""
+def CompileFile(pInputPath: str, pOutputPath: str = None, pNoEntry: bool = False,
+                pImports: list = None) -> str:
+    """Compile a C source file to DASM. Returns the output path written.
+
+    `pImports` is an optional list of object-file paths that the linker
+    should pull in alongside this one. Each becomes a `!IMPORT "<path>"`
+    line at the top of the emitted .asm.
+    """
     source = Preprocess(pInputPath)
 
     base_name = os.path.basename(pInputPath)
@@ -50,6 +63,7 @@ def CompileFile(pInputPath: str, pOutputPath: str = None, pNoEntry: bool = False
 
     codegen = CodeGen(analyzer, base_name)
     codegen.no_entry = pNoEntry
+    codegen.imports = list(pImports) if pImports else []
     asm_text = codegen.Generate(unit)
 
     if pOutputPath is None:
@@ -73,6 +87,7 @@ def main():
     input_path = None
     output_path = None
     no_entry = False
+    imports: list = []
     i = 0
     while i < len(args):
         a = args[i]
@@ -85,6 +100,12 @@ def main():
         elif a == "--no-entry":
             no_entry = True
             i += 1
+        elif a == "--import":
+            if i + 1 >= len(args):
+                print("Error: --import requires an argument")
+                sys.exit(1)
+            imports.append(args[i + 1])
+            i += 2
         elif a.startswith("-"):
             print(f"Error: unknown flag {a!r}")
             sys.exit(1)
@@ -101,7 +122,7 @@ def main():
         sys.exit(1)
 
     try:
-        result = CompileFile(input_path, output_path, no_entry)
+        result = CompileFile(input_path, output_path, no_entry, imports)
     except CCompileError as e:
         print(f"cc: {e}")
         sys.exit(1)

@@ -9,9 +9,10 @@ from typing import List, Optional
 
 from CCompilerComponents.AST import (
     CType, IntLit, CharLit, StringLit, Ident, BinaryOp, UnaryOp, Assign,
-    Call, Index, Ternary, IncDec, VarDecl, ExprStmt, Block, If, While,
-    ForLoop, Return, Break, Continue, AsmStmt, Param, FuncDef, GlobalDecl,
-    TranslationUnit, Expr, Stmt,
+    Call, Index, MemberAccess, Ternary, IncDec, Cast, SizeOf, VarDecl,
+    ExprStmt, Block, If, While, ForLoop, Return, Break, Continue, AsmStmt,
+    Param, FuncDef, GlobalDecl, StructDecl, StructField, TranslationUnit,
+    Expr, Stmt,
 )
 from CCompilerComponents.Exceptions import CParseError
 from CCompilerComponents.Lexer import (
@@ -91,9 +92,16 @@ class Parser:
         return TranslationUnit(items=items)
 
     def _ParseTopLevel(self):
-        # All top-level forms start with a type keyword (optionally preceded
-        # by `extern`). `extern` is accepted on both functions and globals
-        # and marks them as declared-here, defined-elsewhere.
+        # Struct definition/forward declaration:  `struct Foo { ... };` or
+        # `struct Foo;`. This must come before the general type/ident path —
+        # otherwise `_ParseType` would consume `struct Foo` and we'd then
+        # require an identifier where the body's `{` actually appears.
+        if self._Match(TK_KEYWORD, "struct") and self._IsStructDeclarationAhead():
+            return self._ParseStructDecl()
+
+        # All other top-level forms start with a type keyword (optionally
+        # preceded by `extern`). `extern` is accepted on both functions and
+        # globals and marks them as declared-here, defined-elsewhere.
         start_tok = self._Peek()
         is_extern = bool(self._Accept(TK_KEYWORD, "extern"))
         ctype = self._ParseType()
@@ -132,16 +140,73 @@ class Parser:
         # outermost CType.
         is_const = bool(self._Accept(TK_KEYWORD, "const"))
         tok = self._Peek()
-        if tok.kind != TK_KEYWORD or tok.value not in ("int", "char", "void"):
+
+        # `struct Name` as a type reference.
+        if tok.kind == TK_KEYWORD and tok.value == "struct":
+            self._Advance()
+            name_tok = self._Expect(TK_IDENT)
+            ctype = CType(kind="struct", struct_name=name_tok.value)
+        elif tok.kind == TK_KEYWORD and tok.value in ("int", "char", "void"):
+            self._Advance()
+            ctype = CType(kind=tok.value)
+        else:
             raise CParseError(f"Expected type, got {tok.value!r}", tok.line, tok.col)
-        self._Advance()
-        ctype = CType(kind=tok.value)
+
         # Pointer stars. is_const stays on the *outermost* type, which after
         # any '*' is the pointer itself — matches our variable-level semantics.
         while self._Accept(TK_PUNCT, "*"):
             ctype = CType(kind="ptr", inner=ctype)
         ctype.is_const = is_const
         return ctype
+
+    def _IsStructDeclarationAhead(self) -> bool:
+        """True if the next tokens form a struct definition/forward-decl
+        (`struct Foo { ... };` or `struct Foo;`), as opposed to a struct
+        type reference used in a variable/function declaration
+        (`struct Foo var;`, `struct Foo *p;`)."""
+        # Token stream from current position: [struct] [IDENT] [{ or ;] -> decl
+        #                                     [struct] [IDENT] [* or IDENT] -> var/func
+        if not self._Match(TK_KEYWORD, "struct"):
+            return False
+        if self._Peek(1).kind != TK_IDENT:
+            return False
+        third = self._Peek(2)
+        return third.kind == TK_PUNCT and third.value in ("{", ";")
+
+    def _ParseStructDecl(self) -> StructDecl:
+        """Parse `struct Foo { fields };` or `struct Foo;` forward declaration."""
+        tok = self._Expect(TK_KEYWORD, "struct")
+        name_tok = self._Expect(TK_IDENT)
+        # Forward declaration: `struct Foo;`
+        if self._Accept(TK_PUNCT, ";"):
+            return StructDecl(name=name_tok.value, fields=[], is_forward=True,
+                              line=tok.line)
+        # Full definition: `struct Foo { ... };`
+        self._Expect(TK_PUNCT, "{")
+        fields: List[StructField] = []
+        while not self._Match(TK_PUNCT, "}"):
+            if self._Match(TK_EOF):
+                raise CParseError(f"Unterminated struct body for '{name_tok.value}'",
+                                  tok.line, tok.col)
+            field_start = self._Peek()
+            field_type = self._ParseType()
+            if field_type.kind == "void":
+                raise CParseError("Struct field cannot be void",
+                                  field_start.line, field_start.col)
+            field_name = self._Expect(TK_IDENT).value
+            # Allow `int arr[N];` as a field — sized array, no string init.
+            if self._Accept(TK_PUNCT, "["):
+                size_tok = self._Expect(TK_INT_LIT)
+                self._Expect(TK_PUNCT, "]")
+                field_type = CType(kind="array", inner=field_type,
+                                   size=size_tok.value, is_const=field_type.is_const)
+            self._Expect(TK_PUNCT, ";")
+            fields.append(StructField(name=field_name, ctype=field_type,
+                                      line=field_start.line))
+        self._Expect(TK_PUNCT, "}")
+        self._Expect(TK_PUNCT, ";")
+        return StructDecl(name=name_tok.value, fields=fields, is_forward=False,
+                          line=tok.line)
 
     # ------------------------------------------------------------------
     # Function definition
@@ -213,7 +278,7 @@ class Parser:
             if kw == "break":    return self._ParseBreak()
             if kw == "continue": return self._ParseContinue()
             if kw == "asm":      return self._ParseAsm()
-            if kw in ("int", "char", "const"):  # Local declaration
+            if kw in ("int", "char", "const", "struct"):  # Local declaration
                 return self._ParseLocalDecl()
             if kw == "void":
                 raise CParseError("'void' is only valid as a function return type",
@@ -256,7 +321,8 @@ class Parser:
             pass  # empty init
         elif (self._Match(TK_KEYWORD, "int")
               or self._Match(TK_KEYWORD, "char")
-              or self._Match(TK_KEYWORD, "const")):
+              or self._Match(TK_KEYWORD, "const")
+              or self._Match(TK_KEYWORD, "struct")):
             # Declaration form — _ParseLocalDecl consumes the trailing ';'.
             init = self._ParseLocalDecl()
         else:
@@ -374,6 +440,15 @@ class Parser:
 
     def _ParseUnary(self) -> Expr:
         tok = self._Peek()
+        # `sizeof(type)` or `sizeof expr` / `sizeof(expr)`.
+        if tok.kind == TK_KEYWORD and tok.value == "sizeof":
+            return self._ParseSizeOf()
+        # Cast: `(type)expr`. Distinguished from a parenthesized expression
+        # by looking at the token after `(` — if it's a type-starting keyword,
+        # it's a cast. (Once typedef is added, also peek for known type names.)
+        if (tok.kind == TK_PUNCT and tok.value == "("
+                and self._IsTypeStart(self._Peek(1))):
+            return self._ParseCast()
         # Prefix ++ / --: parsed as IncDec, target must be lvalue (checked later).
         if tok.kind == TK_PUNCT and tok.value in ("++", "--"):
             self._Advance()
@@ -390,6 +465,41 @@ class Parser:
                            line=tok.line, col=tok.col)
         return self._ParsePostfix()
 
+    def _IsTypeStart(self, pTok: Token) -> bool:
+        """True if `pTok` could be the first token of a type. Used to
+        distinguish `(T)expr` casts from `(expr)` parens, and `sizeof(T)`
+        from `sizeof(expr)`. Once typedef lands, this should also consult
+        the typedef table."""
+        return (pTok.kind == TK_KEYWORD
+                and pTok.value in ("int", "char", "void", "const", "struct"))
+
+    def _ParseSizeOf(self) -> SizeOf:
+        # `sizeof` already at current position.
+        tok = self._Expect(TK_KEYWORD, "sizeof")
+        # `sizeof(...)` form — could be sizeof(type) or sizeof(expr).
+        if self._Accept(TK_PUNCT, "("):
+            if self._IsTypeStart(self._Peek()):
+                t = self._ParseType()
+                self._Expect(TK_PUNCT, ")")
+                return SizeOf(target_type=t, line=tok.line, col=tok.col)
+            expr = self._ParseExpression()
+            self._Expect(TK_PUNCT, ")")
+            return SizeOf(target=expr, line=tok.line, col=tok.col)
+        # `sizeof unary-expr` form (no parens).
+        expr = self._ParseUnary()
+        return SizeOf(target=expr, line=tok.line, col=tok.col)
+
+    def _ParseCast(self) -> Cast:
+        # `(` is the next token; we've already peeked past it to confirm a
+        # type follows. Consume `(`, parse the type, expect `)`, then a
+        # unary-expression operand (right-associative — `(int)(char)x` works).
+        lparen = self._Expect(TK_PUNCT, "(")
+        t = self._ParseType()
+        self._Expect(TK_PUNCT, ")")
+        operand = self._ParseUnary()
+        return Cast(target_type=t, operand=operand,
+                    line=lparen.line, col=lparen.col)
+
     def _ParsePostfix(self) -> Expr:
         expr = self._ParsePrimary()
         while True:
@@ -397,6 +507,12 @@ class Parser:
                 idx = self._ParseExpression()
                 self._Expect(TK_PUNCT, "]")
                 expr = Index(array=expr, index=idx, line=expr.line, col=expr.col)
+            elif self._Match(TK_PUNCT, ".") or self._Match(TK_PUNCT, "->"):
+                op_tok = self._Advance()
+                field_tok = self._Expect(TK_IDENT)
+                expr = MemberAccess(target=expr, field=field_tok.value,
+                                    via_ptr=(op_tok.value == "->"),
+                                    line=op_tok.line, col=op_tok.col)
             elif self._Match(TK_PUNCT, "++") or self._Match(TK_PUNCT, "--"):
                 op_tok = self._Advance()
                 expr = IncDec(op=op_tok.value, is_post=True, target=expr,

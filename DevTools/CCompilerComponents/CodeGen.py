@@ -9,14 +9,14 @@ Locals/params live on the stack. Reads/writes go through REY (effective
 address) using REZ as the offset constant. The frame pointer is REX.
 """
 
-from typing import List
+from typing import List, Optional
 
 from CCompilerComponents import CallingConvention as CC
 from CCompilerComponents.AST import (
-    TranslationUnit, FuncDef, GlobalDecl, Block, VarDecl, If, While, ForLoop,
-    Return, Break, Continue, ExprStmt, AsmStmt, Expr, Stmt, IntLit, CharLit,
-    StringLit, Ident, BinaryOp, UnaryOp, Assign, Call, Index, Ternary, IncDec,
-    CType,
+    TranslationUnit, FuncDef, GlobalDecl, StructDecl, Block, VarDecl, If, While,
+    ForLoop, Return, Break, Continue, ExprStmt, AsmStmt, Expr, Stmt, IntLit,
+    CharLit, StringLit, Ident, BinaryOp, UnaryOp, Assign, Call, Index,
+    MemberAccess, Ternary, IncDec, Cast, SizeOf, CType,
 )
 from CCompilerComponents.AsmEmitter import AsmEmitter
 from CCompilerComponents.LabelGenerator import LabelGenerator
@@ -70,6 +70,10 @@ class CodeGen:
         self._loop_stack: List[tuple] = []
         # When True, skip the .Kernel boot stub (library mode).
         self.no_entry: bool = False
+        # Object-file dependencies to declare via !IMPORT at the top of the
+        # emitted .asm. Lets the linker pull in sibling objects (like the
+        # heap library) without command-line plumbing.
+        self.imports: List[str] = []
 
     # ------------------------------------------------------------------
     # Entry
@@ -92,6 +96,9 @@ class CodeGen:
         e.Comment(f"cc.py output for {self.source_name}")
         e.Comment("Auto-generated. Do not edit by hand.")
         e.Comment("=" * 60)
+        # Linker dependencies from `--import` flags. Emit before any segment.
+        for imp in self.imports:
+            e.Raw(f'!IMPORT "{imp}"')
 
     def _EmitKernel(self, pUnit: TranslationUnit) -> None:
         # Library mode: caller suppresses the boot stub entirely.
@@ -147,18 +154,23 @@ class CodeGen:
         e = self.emitter
         e.Label(pGlobal.name)
         if pGlobal.ctype.IsArray():
-            n = pGlobal.ctype.size
             if isinstance(pGlobal.init, StringLit):
                 # String literal: emit chars then NUL; pad the rest with zeros.
+                # Char arrays only — analyzer guarantees inner.kind == 'char'.
+                n = pGlobal.ctype.size  # element count (1 word each for char)
                 chars = [self._Imm(ord(c)) for c in pGlobal.init.value] + ["#0"]
                 pad = ["#0"] * (n - len(chars))
                 e.DataWord(*(chars + pad),
                            pComment=f'{pGlobal.ctype} = "{pGlobal.init.value}"')
             else:
-                # Zero-init for non-string array initializers (the analyzer
-                # only allows string literals, so anything else is a bug).
-                words = ["#0"] * n
+                # Zero-init. Use WordSize() so arrays of multi-word elements
+                # (e.g. struct elements) get the right total.
+                words = ["#0"] * pGlobal.ctype.WordSize()
                 e.DataWord(*words, pComment=f"{pGlobal.ctype}")
+        elif pGlobal.ctype.IsStruct():
+            # Struct globals: zero-init (initializer lists not supported).
+            words = ["#0"] * pGlobal.ctype.WordSize()
+            e.DataWord(*words, pComment=f"{pGlobal.ctype}")
         else:
             init_val = "#0"
             if pGlobal.init is not None:
@@ -186,6 +198,10 @@ class CodeGen:
         e = self.emitter
         self._current_func = pFunc
         self._func_label_prefix = pFunc.name
+        # Keep the analyzer's per-function state aligned so its helpers
+        # (notably _TypeOfExpr -> _GetIdentType) resolve identifiers against
+        # the function currently being emitted, not the last one analyzed.
+        self.analyzer._current_func = pFunc
 
         param_list = ", ".join(f"{p.ctype} {p.name}" for p in pFunc.params)
         e.Blank()
@@ -420,8 +436,21 @@ class CodeGen:
             return
 
         if isinstance(pExpr, Index):
-            # Compute address into REA, copy to REY, then dereference.
+            # Compute address into REA, copy to REY, then dereference (scalar
+            # elements only). For struct elements, "loading" by value isn't
+            # representable in a 1-word register — the caller almost certainly
+            # wants a sub-field via `.` or the address via `&`.
             self._AddressOfIndex(pExpr)
+            arr_t = self.analyzer._TypeOfExpr(pExpr.array)
+            elem_t = (arr_t.inner if arr_t is not None
+                      and (arr_t.IsArray() or arr_t.IsPointer()) else None)
+            if elem_t is not None and elem_t.IsStruct():
+                raise CCodeGenError(
+                    "Cannot use a struct array element by value here "
+                    "(use `.field` or `&` to take its address)")
+            if elem_t is not None and elem_t.IsArray():
+                # Multi-dimensional: element decays to its address.
+                return
             self.emitter.Instr("MOV", CC.ADDR_REG_A, CC.ACC_REG)
             self.emitter.Instr("LDI", CC.ACC_REG, f"[{CC.ADDR_REG_A}]", pComment="deref a[i]")
             return
@@ -432,6 +461,32 @@ class CodeGen:
 
         if isinstance(pExpr, IncDec):
             self._GenIncDec(pExpr)
+            return
+
+        if isinstance(pExpr, MemberAccess):
+            self._GenMemberLoad(pExpr)
+            return
+
+        if isinstance(pExpr, Cast):
+            # Casts are runtime no-ops in this v1 dialect — every scalar /
+            # pointer is one 24-bit word, so reinterpreting the bits is free.
+            # Just emit the operand's value.
+            self._GenExpr(pExpr.operand)
+            return
+
+        if isinstance(pExpr, SizeOf):
+            # Fold to a compile-time integer. The operand of sizeof is
+            # unevaluated; we never generate code for it.
+            if pExpr.target_type is not None:
+                size = pExpr.target_type.WordSize()
+            else:
+                t = self.analyzer._TypeOfExpr(pExpr.target)
+                if t is None:
+                    raise CCodeGenError(
+                        "sizeof: cannot determine operand type")
+                size = t.WordSize()
+            self.emitter.Instr("LDI", CC.ACC_REG, self._Imm(size),
+                               pComment=f"sizeof = {size}")
             return
 
         raise CCodeGenError(f"Unhandled expression {type(pExpr).__name__}")
@@ -687,17 +742,123 @@ class CodeGen:
             e.Instr("STR", CC.ADDR_REG_A, CC.ACC_REG, pComment="*target = value")
             return
 
+        # Member-access fast path: when the field is a scalar of a LOCAL
+        # struct (the common case `s.x = ...`), STR_LOC handles it in one
+        # instruction — same trick used for plain locals.
+        if isinstance(target, MemberAccess) and self._TryFastMemberStore(target):
+            return
+
         # Complex lvalue path
         e.Instr("PUSH", CC.ACC_REG, pComment="save value")
         if isinstance(target, Index):
             self._AddressOfIndex(target)
         elif isinstance(target, UnaryOp) and target.op == "*":
             self._GenExpr(target.operand)
+        elif isinstance(target, MemberAccess):
+            self._AddressOfMember(target)
         else:
             raise CCodeGenError(f"Cannot assign to {type(target).__name__}")
         e.Instr("MOV", CC.ADDR_REG_A, CC.ACC_REG, pComment="REY = &target")
         e.Instr("POP", CC.ACC_REG, pComment="restore value")
         e.Instr("STR", CC.ADDR_REG_A, CC.ACC_REG, pComment="*target = value")
+
+    # ------------------------------------------------------------------
+    # Struct member access
+    # ------------------------------------------------------------------
+
+    def _GenMemberLoad(self, pExpr: MemberAccess) -> None:
+        """Load the value of `target.field` or `target->field` into REA.
+
+        Fast path: scalar field of a LOCAL struct (`.field`, not `->field`)
+        becomes a single `LDR_LOC` because the slot offset is known at
+        compile time.
+
+        General path: compute address into REA, MOV to ADDR_REG_A, deref.
+        """
+        e = self.emitter
+
+        # Fast path: `local_struct.scalar_field`.
+        if (not pExpr.via_ptr and isinstance(pExpr.target, Ident)):
+            sym = self._current_func.symbols.get(pExpr.target.name)
+            if (sym is not None and not sym.is_param
+                    and sym.ctype.IsStruct()):
+                field = sym.ctype.struct_def.FindField(pExpr.field)
+                if field.ctype.IsScalar():
+                    slot_offset = (sym.slot + sym.ctype.WordSize()
+                                   - 1 - field.offset)
+                    e.Instr("LDR_LOC", CC.ACC_REG, self._Imm(slot_offset),
+                            pComment=f"{pExpr.target.name}.{pExpr.field}")
+                    return
+
+        # General path: compute &field, then deref (scalar fields only).
+        self._AddressOfMember(pExpr)
+        field_t = self._FieldTypeOf(pExpr)
+        if field_t is not None and field_t.IsStruct():
+            # A struct-typed field can't be loaded by value. The user wants
+            # a sub-field of it (`.x.y`) or its address (`&x.y`); both routes
+            # call _AddressOfMember directly without going through here.
+            raise CCodeGenError(
+                f"Cannot use struct field '.{pExpr.field}' by value here "
+                f"(access a sub-field or take its address)")
+        if field_t is not None and field_t.IsArray():
+            # Array field decays to its address.
+            return
+        e.Instr("MOV", CC.ADDR_REG_A, CC.ACC_REG)
+        e.Instr("LDI", CC.ACC_REG, f"[{CC.ADDR_REG_A}]",
+                pComment=f".{pExpr.field}")
+
+    def _TryFastMemberStore(self, pTarget: MemberAccess) -> bool:
+        """If `pTarget` is a scalar field of a local struct accessed with `.`,
+        emit a single STR_LOC and return True. Otherwise return False so the
+        caller can use the general address-compute path. Assumes REA holds
+        the value to store."""
+        if pTarget.via_ptr or not isinstance(pTarget.target, Ident):
+            return False
+        sym = self._current_func.symbols.get(pTarget.target.name)
+        if sym is None or sym.is_param or not sym.ctype.IsStruct():
+            return False
+        field = sym.ctype.struct_def.FindField(pTarget.field)
+        if not field.ctype.IsScalar():
+            return False
+        slot_offset = sym.slot + sym.ctype.WordSize() - 1 - field.offset
+        self.emitter.Instr(
+            "STR_LOC", CC.ACC_REG, self._Imm(slot_offset),
+            pComment=f"{pTarget.target.name}.{pTarget.field} = value")
+        return True
+
+    def _AddressOfMember(self, pExpr: MemberAccess) -> None:
+        """Compute `&(target.field)` or `&(target->field)` into REA."""
+        e = self.emitter
+        struct_t = self._StructTypeOfTarget(pExpr.target, pExpr.via_ptr)
+        field = struct_t.struct_def.FindField(pExpr.field)
+
+        if pExpr.via_ptr:
+            # target is a pointer expression; its value IS the struct's address.
+            self._GenExpr(pExpr.target)
+        else:
+            # target is itself a struct lvalue; take its address.
+            self._AddressOfLValue(pExpr.target)
+
+        if field.offset != 0:
+            e.Instr("LDI", CC.SCRATCH_B, self._Imm(field.offset))
+            e.Instr("ADD", CC.ACC_REG, CC.SCRATCH_B,
+                    pComment=f"&.{pExpr.field} (+{field.offset})")
+
+    def _StructTypeOfTarget(self, pTargetExpr: Expr, pViaPtr: bool) -> CType:
+        """Return the CType (kind='struct') for the struct being accessed.
+        For `.`, that's the target's type. For `->`, it's the target's
+        pointer-inner type."""
+        t = self.analyzer._TypeOfExpr(pTargetExpr)
+        if t is None:
+            raise CCodeGenError(
+                "Cannot determine struct type for member access (analyzer bug?)")
+        return t.inner if pViaPtr else t
+
+    def _FieldTypeOf(self, pExpr: MemberAccess) -> Optional[CType]:
+        """The CType of the accessed field, or None if it can't be determined."""
+        struct_t = self._StructTypeOfTarget(pExpr.target, pExpr.via_ptr)
+        f = struct_t.struct_def.FindField(pExpr.field)
+        return f.ctype if f is not None else None
 
     def _AddressOfLValue(self, pExpr: Expr) -> None:
         """Compute the address of an lvalue, leave in REA (for &x as rvalue)."""
@@ -707,6 +868,9 @@ class CodeGen:
             return
         if isinstance(pExpr, Index):
             self._AddressOfIndex(pExpr)
+            return
+        if isinstance(pExpr, MemberAccess):
+            self._AddressOfMember(pExpr)
             return
         if isinstance(pExpr, UnaryOp) and pExpr.op == "*":
             # &*p  ==  p
@@ -755,9 +919,18 @@ class CodeGen:
     def _AddressOfIndex(self, pExpr: Index) -> None:
         """Compute &(array[index]). All elements are 1 word."""
         e = self.emitter
-        # Evaluate index, save it.
+        # Determine element word-size for stride. For scalar elements (the
+        # historical case) this is 1 and we emit no multiply; for arrays of
+        # struct (multi-word elements) we scale the index before adding.
+        elem_size = self._IndexElementSize(pExpr.array)
+
+        # Evaluate index, scale by element size if needed, save it.
         self._GenExpr(pExpr.index)
-        e.Instr("PUSH", CC.ACC_REG, pComment="save index")
+        if elem_size > 1:
+            e.Instr("LDI", CC.SCRATCH_B, self._Imm(elem_size),
+                    pComment=f"sizeof(element) = {elem_size}")
+            e.Instr("MUL", CC.ACC_REG, CC.SCRATCH_B, pComment="index *= sizeof")
+        e.Instr("PUSH", CC.ACC_REG, pComment="save scaled index")
         # Compute base address into REA.
         if isinstance(pExpr.array, Ident):
             # Could be an array or a pointer; both reduce to "address of element 0".
@@ -783,8 +956,21 @@ class CodeGen:
             # General lvalue/expression that yields a pointer value
             self._GenExpr(pExpr.array)
         # REA = base; pop index into REB and add.
-        e.Instr("POP", CC.SCRATCH_B, pComment="REB = index")
+        e.Instr("POP", CC.SCRATCH_B, pComment="REB = scaled index")
         e.Instr("ADD", CC.ACC_REG, CC.SCRATCH_B, pComment="&base[index]")
+
+    def _IndexElementSize(self, pArrayExpr: Expr) -> int:
+        """Word-size of one element when indexing `pArrayExpr`. Returns 1 for
+        scalar/pointer/char arrays and pointers (the historical default);
+        returns N>1 for arrays of struct or pointers-to-struct (where the
+        struct itself has WordSize N).
+        """
+        arr_t = self.analyzer._TypeOfExpr(pArrayExpr)
+        if arr_t is None:
+            return 1
+        if arr_t.IsArray() or arr_t.IsPointer():
+            return arr_t.inner.WordSize() if arr_t.inner is not None else 1
+        return 1
 
     # ------------------------------------------------------------------
     # Calls
@@ -816,6 +1002,12 @@ class CodeGen:
         e = self.emitter
         local = self._current_func.symbols.get(pName)
         if local is not None:
+            if local.ctype.IsStruct():
+                # Bare struct value isn't loadable (multi-word). Should be
+                # caught by the analyzer in most contexts; defense in depth.
+                raise CCodeGenError(
+                    f"Cannot use struct '{pName}' as a value here "
+                    f"(use a field or &{pName})")
             if local.ctype.IsArray():
                 # Array name decays to pointer to element 0
                 self._AddressOfIdentInto(CC.ACC_REG, pName)

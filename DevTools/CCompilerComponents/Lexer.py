@@ -24,22 +24,24 @@ KEYWORDS = {
     "int", "char", "void",
     "if", "else", "while", "for", "return",
     "break", "continue", "const",
+    "struct",
+    "sizeof",
     "asm", "syscall", "extern",
 }
 
 
 # Multi-character punctuators, sorted longest-first.
-# Note: "++"/"--" must precede "+"/"-" so greedy match picks them.
+# Note: "++"/"--"/"->" must precede their single-char prefixes so greedy match picks them.
 MULTI_PUNCT = [
     "<<=", ">>=",
     "==", "!=", "<=", ">=", "<<", ">>",
     "&&", "||",
-    "++", "--",
+    "++", "--", "->",
     "+=", "-=", "*=", "/=", "%=",
     "&=", "|=", "^=",
 ]
 
-SINGLE_PUNCT = set("+-*/%&|^~!=<>(){}[],;?:")
+SINGLE_PUNCT = set("+-*/%&|^~!=<>(){}[],;?:.")
 
 
 @dataclass
