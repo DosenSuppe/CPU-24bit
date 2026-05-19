@@ -213,7 +213,12 @@ class CodeGen:
         e.Instr("PUSH", CC.FP_REG, pComment="save old FP")
         e.Instr("GET_SP", CC.FP_REG, pComment="FP = SP")
 
-        # Reserve local slots. Each PUSH #0 reserves 1 word.
+        # Reserve local slots. Each PUSH #0 reserves 1 word. Slot reservation
+        # happens once up front (we need the full frame size known here so the
+        # epilogue can SET_SP_R back), but the *initializer expressions* must
+        # run at their source-order position — not hoisted to function entry —
+        # otherwise an init like `int x = some_func(y)` runs before `y` has
+        # been computed by earlier statements.
         for _ in range(pFunc.frame_size):
             e.Instr("PUSH", "#0", pComment="reserve local")
 
@@ -221,17 +226,13 @@ class CodeGen:
         # In our model params are already addressable on the stack (caller pushed them).
         # No copy needed — _LoadIdent computes their FP-relative address directly.
 
-        # Initialize locals with their init expressions. Scalars get re-init
-        # at block entry too (see _GenStmt Block handler) — this entry-time
-        # pass exists mainly so top-level decls (which the body walk skips)
-        # get their initializer at least once.
-        for decl in pFunc.locals:
-            self._GenLocalInit(decl)
-
-        # Emit each statement.
+        # Emit each statement. VarDecls run their initializer here (in source
+        # order); the slot itself was reserved above. Nested-block VarDecls
+        # are handled the same way by the Block handler in _GenStmt.
         last_real_stmt = None
         for s in pFunc.body.stmts:
             if isinstance(s, VarDecl):
+                self._GenLocalInit(s)
                 continue
             self._GenStmt(s)
             last_real_stmt = s
@@ -263,7 +264,8 @@ class CodeGen:
         if isinstance(pStmt, Block):
             for s in pStmt.stmts:
                 if isinstance(s, VarDecl):
-                    # Hoisted at function entry; only its initializer runs here.
+                    # Slot was reserved up front in _GenFunc; the initializer
+                    # runs here, in source order.
                     self._GenLocalInit(s)
                     continue
                 self._GenStmt(s)
