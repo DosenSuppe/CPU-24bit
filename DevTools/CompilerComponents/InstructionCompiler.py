@@ -432,8 +432,10 @@ class LDIInstructionCompiler:
             bytecode = opcode | GenerateDestinationRegister(destVal)
             return InstructionResult(bytecode, pExtraWord=srcVal)
         
-        # Symbol reference
-        elif srcType == OperandType.SYMBOL:
+        # Symbol reference (bracketed and non-bracketed forms behave the same
+        # for LDI: both load the symbol's resolved address as an immediate
+        # value into the register).
+        elif srcType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
             opcode = INSTRUCTION_SET['LDI'][0]
             bytecode = opcode | GenerateDestinationRegister(destVal)
             relocation = {
@@ -443,9 +445,11 @@ class LDIInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
-        
-        # Memory config symbol reference
-        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+
+        # Memory config symbol reference (bracketed and non-bracketed forms
+        # behave identically for LDI — same reasoning as above).
+        elif srcType in (OperandType.MEMORY_CONFIG_SYMBOL,
+                         OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
             opcode = INSTRUCTION_SET['LDI'][0]
             bytecode = opcode | GenerateDestinationRegister(destVal)
             # Use a special prefix to mark this as a memory config symbol
@@ -457,7 +461,7 @@ class LDIInstructionCompiler:
                 'symbol': symbol_name
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
-        
+
         # Register
         elif srcType == OperandType.REGISTER:
             opcode = INSTRUCTION_SET['LDI'][2]
@@ -506,8 +510,10 @@ class STRInstructionCompiler:
             bytecode = opcode | GenerateSourceRegister(srcVal)
             return InstructionResult(bytecode, pExtraWord=destVal)
         
-        # Symbol reference
-        elif destType == OperandType.SYMBOL:
+        # Symbol reference. STR's destination is always an address, so the
+        # bracketed `[label]` form is semantically identical to bare `label`
+        # — both store into the linker-resolved address.
+        elif destType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
             opcode = INSTRUCTION_SET['STR'][0]
             bytecode = opcode | GenerateSourceRegister(srcVal)
             relocation = {
@@ -517,9 +523,10 @@ class STRInstructionCompiler:
                 'symbol': destVal
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
-        
-        # Memory config symbol reference
-        elif destType == OperandType.MEMORY_CONFIG_SYMBOL:
+
+        # Memory config symbol reference (bracketed and non-bracketed: same).
+        elif destType in (OperandType.MEMORY_CONFIG_SYMBOL,
+                          OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
             opcode = INSTRUCTION_SET['STR'][0]
             bytecode = opcode | GenerateSourceRegister(srcVal)
             # Use a special prefix to mark this as a memory config symbol
@@ -553,28 +560,20 @@ class ControlFlowInstructionCompiler:
     def Compile(pMnemonic: str, pOperands: list, pSegment: str, pOffset: int) -> InstructionResult:
         """
         Compile control flow instructions.
-        
-        Supports:
-        - JP #0x1000  (immediate address)
-        - JP [0x1000]  (direct address)
-        - JP symbol  (symbol reference)
-        - JP REA  (register)
-        
-        Args:
-            mnemonic: Instruction mnemonic (JP, JPZ, JPC, CALL)
-            operands: List of parsed operands
-            segment: Current segment name
-            offset: Current offset in segment
-            
-        Returns:
-            InstructionResult with encoded instruction
+
+        Addressing modes (encoded as three distinct opcodes per mnemonic):
+        - JP #0x1000   — immediate: branch to literal address 0x1000     -> opcode[0]
+        - JP my_label  — symbol:    branch to address resolved by linker -> opcode[0]
+        - JP REA       — register:  branch to address held in REA        -> opcode[1]
+        - JP [0x1000]  — memory-indirect: load target from RAM[0x1000],
+                         then branch to that value                       -> opcode[2]
         """
         if len(pOperands) != 1:
             raise InstructionError(f"{pMnemonic} requires 1 operand, got {len(pOperands)}")
-        
+
         opType, opVal = pOperands[0]
-        
-        # Symbol reference
+
+        # Symbol reference — linker resolves to absolute address (immediate form).
         if opType == OperandType.SYMBOL:
             opcode = INSTRUCTION_SET[pMnemonic][0]
             relocation = {
@@ -584,12 +583,11 @@ class ControlFlowInstructionCompiler:
                 'symbol': opVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        
-        # Memory config symbol reference
+
+        # Memory-config symbol — same immediate form, with the $MEM$ marker.
         elif opType == OperandType.MEMORY_CONFIG_SYMBOL:
             opcode = INSTRUCTION_SET[pMnemonic][0]
-            # Use a special prefix to mark this as a memory config symbol
-            symbol_name = "$MEM$" + opVal[1:]  # Replace $ with $MEM$ marker
+            symbol_name = "$MEM$" + opVal[1:]
             relocation = {
                 'segment': pSegment,
                 'offset': pOffset + 1,
@@ -597,18 +595,47 @@ class ControlFlowInstructionCompiler:
                 'symbol': symbol_name
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        
-        # Immediate or direct address
-        elif opType in [OperandType.IMMEDIATE, OperandType.DIRECT_ADDRESS]:
+
+        # Immediate — literal absolute address baked into the extra word.
+        elif opType == OperandType.IMMEDIATE:
             opcode = INSTRUCTION_SET[pMnemonic][0]
             return InstructionResult(opcode, pExtraWord=opVal)
-        
-        # Register
+
+        # Memory-indirect — extra word is the RAM address holding the target.
+        elif opType == OperandType.DIRECT_ADDRESS:
+            opcode = INSTRUCTION_SET[pMnemonic][2]
+            return InstructionResult(opcode, pExtraWord=opVal)
+
+        # Memory-indirect via symbol — linker fills in the RAM address; CPU
+        # then reads the target value from that location. `CALL [my_label]`.
+        elif opType == OperandType.DIRECT_ADDRESS_SYMBOL:
+            opcode = INSTRUCTION_SET[pMnemonic][2]
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': opVal
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+
+        # Memory-indirect via memory-config symbol — `CALL [$TTYOwner.Start]`.
+        elif opType == OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET[pMnemonic][2]
+            symbol_name = "$MEM$" + opVal[1:]
+            relocation = {
+                'segment': pSegment,
+                'offset': pOffset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
+
+        # Register-direct — target address is in the named register.
         elif opType == OperandType.REGISTER:
             opcode = INSTRUCTION_SET[pMnemonic][1]
             bytecode = opcode | GenerateSourceRegister(opVal)
             return InstructionResult(bytecode)
-        
+
         else:
             raise InstructionError(f"Invalid {pMnemonic} operand type: {opType}")
 
@@ -650,8 +677,9 @@ class StackInstructionCompiler:
             opcode = INSTRUCTION_SET['PUSH'][1]
             return InstructionResult(opcode, pExtraWord=srcVal)
         
-        # Symbol reference
-        elif srcType == OperandType.SYMBOL:
+        # Symbol reference (bracketed and non-bracketed forms both push the
+        # symbol's resolved address — PUSH has no "push value at address" form).
+        elif srcType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
             opcode = INSTRUCTION_SET['PUSH'][1]
             relocation = {
                 'segment': pSegment,
@@ -660,9 +688,10 @@ class StackInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        
-        # Memory config symbol reference
-        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+
+        # Memory config symbol reference (bracketed and non-bracketed: same).
+        elif srcType in (OperandType.MEMORY_CONFIG_SYMBOL,
+                         OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
             opcode = INSTRUCTION_SET['PUSH'][1]
             # Use a special prefix to mark this as a memory config symbol
             symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
@@ -673,7 +702,7 @@ class StackInstructionCompiler:
                 'symbol': symbol_name
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        
+
         else:
             raise InstructionError("PUSH operand must be register, immediate, or symbol")
     
@@ -715,7 +744,7 @@ class SystemInstructionCompiler:
         
         if srcType == OperandType.IMMEDIATE:
             return InstructionResult(opcode, pExtraWord=srcVal)
-        elif srcType == OperandType.SYMBOL:
+        elif srcType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
             relocation = {
                 'segment': pSegment,
                 'offset': pOffset + 1,
@@ -723,7 +752,8 @@ class SystemInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+        elif srcType in (OperandType.MEMORY_CONFIG_SYMBOL,
+                         OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
             # Use a special prefix to mark this as a memory config symbol
             symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
             relocation = {
@@ -777,7 +807,7 @@ class SystemInstructionCompiler:
         
         if srcType == OperandType.IMMEDIATE:
             return InstructionResult(opcode, pExtraWord=srcVal)
-        elif srcType == OperandType.SYMBOL:
+        elif srcType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
             relocation = {
                 'segment': pSegment,
                 'offset': pOffset + 1,
@@ -785,7 +815,8 @@ class SystemInstructionCompiler:
                 'symbol': srcVal
             }
             return InstructionResult(opcode, pExtraWord=0, pRelocation=relocation)
-        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
+        elif srcType in (OperandType.MEMORY_CONFIG_SYMBOL,
+                         OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
             # Use a special prefix to mark this as a memory config symbol
             symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
             relocation = {

@@ -12,6 +12,13 @@ class OperandType:
     REGISTER = 'register'
     SYMBOL = 'symbol'
     MEMORY_CONFIG_SYMBOL = 'memory_config_symbol'
+    # Bracketed forms of the two symbol kinds — `[label]` / `[$Mem.Config]`.
+    # Same as SYMBOL / MEMORY_CONFIG_SYMBOL but mark the operand as
+    # memory-indirect: branch targets read RAM[symbol_addr] instead of jumping
+    # to symbol_addr directly. Currently honored by ControlFlowInstructionCompiler;
+    # other handlers treat them as their non-bracketed counterparts.
+    DIRECT_ADDRESS_SYMBOL = 'direct_address_symbol'
+    DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL = 'direct_address_memory_config_symbol'
 
 
 class OperandParser:
@@ -124,11 +131,11 @@ class OperandParser:
         
         # Memory config symbol: [$FrameBuffer.Start]
         if inner.startswith('$') and re.match(r'^\$[A-Za-z_][A-Za-z0-9_.]*$', inner):
-            return OperandType.MEMORY_CONFIG_SYMBOL, inner
-        
+            return OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL, inner
+
         # Symbol address: [SliderPos], [label_name]
         if re.match(r'^[A-Za-z_][A-Za-z0-9_.]*$', inner):
-            return OperandType.SYMBOL, inner
+            return OperandType.DIRECT_ADDRESS_SYMBOL, inner
         
         # Direct address: [0x1000] or [#100]
         if inner.startswith('#'):
