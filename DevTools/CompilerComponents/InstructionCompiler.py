@@ -432,10 +432,10 @@ class LDIInstructionCompiler:
             bytecode = opcode | GenerateDestinationRegister(destVal)
             return InstructionResult(bytecode, pExtraWord=srcVal)
         
-        # Symbol reference (bracketed and non-bracketed forms behave the same
-        # for LDI: both load the symbol's resolved address as an immediate
-        # value into the register).
-        elif srcType in (OperandType.SYMBOL, OperandType.DIRECT_ADDRESS_SYMBOL):
+        # Symbol reference — non-bracketed loads the resolved address as a
+        # literal (opcode[0]); bracketed loads the *value* at that address
+        # (opcode[1], same as DIRECT_ADDRESS but with a relocation entry).
+        elif srcType == OperandType.SYMBOL:
             opcode = INSTRUCTION_SET['LDI'][0]
             bytecode = opcode | GenerateDestinationRegister(destVal)
             relocation = {
@@ -446,14 +446,34 @@ class LDIInstructionCompiler:
             }
             return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
 
-        # Memory config symbol reference (bracketed and non-bracketed forms
-        # behave identically for LDI — same reasoning as above).
-        elif srcType in (OperandType.MEMORY_CONFIG_SYMBOL,
-                         OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL):
+        elif srcType == OperandType.DIRECT_ADDRESS_SYMBOL:
+            opcode = INSTRUCTION_SET['LDI'][1]
+            bytecode = opcode | GenerateDestinationRegister(destVal)
+            relocation = {
+                'segment': segment,
+                'offset': offset + 1,
+                'type': 'absolute',
+                'symbol': srcVal
+            }
+            return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
+
+        # Memory-config symbol reference — same opcode split as above.
+        elif srcType == OperandType.MEMORY_CONFIG_SYMBOL:
             opcode = INSTRUCTION_SET['LDI'][0]
             bytecode = opcode | GenerateDestinationRegister(destVal)
-            # Use a special prefix to mark this as a memory config symbol
-            symbol_name = "$MEM$" + srcVal[1:]  # Replace $ with $MEM$ marker
+            symbol_name = "$MEM$" + srcVal[1:]
+            relocation = {
+                'segment': segment,
+                'offset': offset + 1,
+                'type': 'absolute',
+                'symbol': symbol_name
+            }
+            return InstructionResult(bytecode, pExtraWord=0, pRelocation=relocation)
+
+        elif srcType == OperandType.DIRECT_ADDRESS_MEMORY_CONFIG_SYMBOL:
+            opcode = INSTRUCTION_SET['LDI'][1]
+            bytecode = opcode | GenerateDestinationRegister(destVal)
+            symbol_name = "$MEM$" + srcVal[1:]
             relocation = {
                 'segment': segment,
                 'offset': offset + 1,
