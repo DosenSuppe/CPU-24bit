@@ -27,18 +27,24 @@ INSTRUCTION_SET = {
     'MOV': 0x02,
     'LDI': [0x03, 0x04, 0x05],
     'STR': [0x06, 0x07],
-    'ADD': 0x08,
-    'SUB': 0x09,
-    'MUL': 0x0A,
-    'DIV': 0x0B,
-    'SHL': 0x0C,
-    'SHR': 0x0D,
-    'NAND': 0x0E,
-    'AND': 0x0F,
-    'OR': 0x10,
-    'XOR': 0x11,
-    'NOR': 0x12,
-    'NOT': 0x13,
+    # Binary ALU operations. Each maps to a 2-element list:
+    #   [0] register form  (ADD REA, REB         or  ADD REX, REY, REZ)
+    #   [1] immediate form (ADD REA, #5          or  ADD REX, #5, REZ)
+    # The immediate form is a 2-word instruction: opcode word carries the
+    # A-input and destination register fields, the second word is the 24-bit
+    # immediate (used as the B input).
+    'ADD':  [0x08, 0x49],
+    'SUB':  [0x09, 0x4A],
+    'MUL':  [0x0A, 0x4B],
+    'DIV':  [0x0B, 0x4C],
+    'SHL':  [0x0C, 0x4D],
+    'SHR':  [0x0D, 0x4E],
+    'NAND': [0x0E, 0x4F],
+    'AND':  [0x0F, 0x50],
+    'OR':   [0x10, 0x51],
+    'XOR':  [0x11, 0x52],
+    'NOR':  [0x12, 0x53],
+    'NOT':  0x13,
     # Branch instructions. Each maps to a 3-element list:
     #   [0] immediate / symbol absolute address  (JP #0x1000, JP my_label)
     #   [1] register-direct                      (JP REA)

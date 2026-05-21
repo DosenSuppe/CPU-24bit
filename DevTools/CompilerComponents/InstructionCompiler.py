@@ -85,63 +85,92 @@ class ALUInstructionCompiler:
     def CompileBinary(pMnemonic: str, pOperands: list) -> InstructionResult:
         """
         Compile binary ALU operations (ADD, SUB, MUL, DIV, etc.).
-        
-        Supports two formats:
-        - 2-operand: ADD REA, REX  (REA = REA op REX)
-        - 3-operand: ADD REX, REY, REZ  (REZ = REX op REY)
-        
-        Args:
-            mnemonic: Instruction mnemonic
-            operands: List of parsed operands
-            
-        Returns:
-            InstructionResult with encoded instruction
+
+        Supports four formats:
+        - 2-operand register:   ADD REA, REB         (REA = REA op REB)
+        - 2-operand immediate:  ADD REA, #5          (REA = REA op 5)
+        - 3-operand register:   ADD REX, REY, REZ    (REZ = REX op REY)
+        - 3-operand immediate:  ADD REX, #5, REZ     (REZ = REX op 5)
+
+        The immediate form uses a distinct opcode (INSTRUCTION_SET[mnemonic][1])
+        and emits a second word containing the 24-bit immediate.
         """
-        opcode = INSTRUCTION_SET[pMnemonic]
-        
+        opcodes = INSTRUCTION_SET[pMnemonic]
+
         if len(pOperands) == 2:
-            return ALUInstructionCompiler._CompileTwoOperand(opcode, pOperands)
+            return ALUInstructionCompiler._CompileTwoOperand(pMnemonic, opcodes, pOperands)
         elif len(pOperands) == 3:
-            return ALUInstructionCompiler._CompileThreeOperand(opcode, pOperands)
+            return ALUInstructionCompiler._CompileThreeOperand(pMnemonic, opcodes, pOperands)
         else:
             raise InstructionError(
                 f"{pMnemonic} requires 2 or 3 operands, got {len(pOperands)}"
             )
-    
+
     @staticmethod
-    def _CompileTwoOperand(opcode: int, operands: list) -> InstructionResult:
-        """Compile 2-operand ALU instruction."""
+    def _CompileTwoOperand(mnemonic: str, opcodes: list, operands: list) -> InstructionResult:
+        """Compile 2-operand ALU instruction (register or immediate B-input)."""
         destType, destVal = operands[0]
         srcType, srcVal = operands[1]
-        
-        if destType != OperandType.REGISTER or srcType != OperandType.REGISTER:
-            raise InstructionError("ALU operations require register operands")
-        
-        bytecode = (opcode | 
-                   GenerateALUAInput(destVal) | 
-                   GenerateALUBInput(srcVal) | 
-                   GenerateDestinationRegister(destVal))
-        
-        return InstructionResult(bytecode)
-    
+
+        if destType != OperandType.REGISTER:
+            raise InstructionError(f"{mnemonic} destination must be a register")
+
+        # Register form: dest = dest op src
+        if srcType == OperandType.REGISTER:
+            opcode = opcodes[0]
+            bytecode = (opcode |
+                       GenerateALUAInput(destVal) |
+                       GenerateALUBInput(srcVal) |
+                       GenerateDestinationRegister(destVal))
+            return InstructionResult(bytecode)
+
+        # Immediate form: dest = dest op #imm (immediate is the B input,
+        # carried in the extra word; B field in the opcode is unused).
+        elif srcType == OperandType.IMMEDIATE:
+            opcode = opcodes[1]
+            bytecode = (opcode |
+                       GenerateALUAInput(destVal) |
+                       GenerateDestinationRegister(destVal))
+            return InstructionResult(bytecode, pExtraWord=srcVal)
+
+        else:
+            raise InstructionError(
+                f"{mnemonic} second operand must be a register or immediate"
+            )
+
     @staticmethod
-    def _CompileThreeOperand(opcode: int, operands: list) -> InstructionResult:
-        """Compile 3-operand ALU instruction."""
+    def _CompileThreeOperand(mnemonic: str, opcodes: list, operands: list) -> InstructionResult:
+        """Compile 3-operand ALU instruction (register or immediate B-input)."""
         aType, aVal = operands[0]
         bType, bVal = operands[1]
         destType, destVal = operands[2]
-        
-        if (aType != OperandType.REGISTER or 
-            bType != OperandType.REGISTER or 
-            destType != OperandType.REGISTER):
-            raise InstructionError("ALU operations require register operands")
-        
-        bytecode = (opcode | 
-                   GenerateALUAInput(aVal) | 
-                   GenerateALUBInput(bVal) | 
-                   GenerateDestinationRegister(destVal))
-        
-        return InstructionResult(bytecode)
+
+        if aType != OperandType.REGISTER:
+            raise InstructionError(f"{mnemonic} first operand must be a register")
+        if destType != OperandType.REGISTER:
+            raise InstructionError(f"{mnemonic} destination must be a register")
+
+        # Register form: dest = a op b
+        if bType == OperandType.REGISTER:
+            opcode = opcodes[0]
+            bytecode = (opcode |
+                       GenerateALUAInput(aVal) |
+                       GenerateALUBInput(bVal) |
+                       GenerateDestinationRegister(destVal))
+            return InstructionResult(bytecode)
+
+        # Immediate form: dest = a op #imm
+        elif bType == OperandType.IMMEDIATE:
+            opcode = opcodes[1]
+            bytecode = (opcode |
+                       GenerateALUAInput(aVal) |
+                       GenerateDestinationRegister(destVal))
+            return InstructionResult(bytecode, pExtraWord=bVal)
+
+        else:
+            raise InstructionError(
+                f"{mnemonic} second operand must be a register or immediate"
+            )
     
     @staticmethod
     def CompileUnary(pMnemonic: str, pOperands: list) -> InstructionResult:
